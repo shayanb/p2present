@@ -22,7 +22,8 @@
 import { parseTime } from './time.js';
 import {
   DEFAULT_IPFS_GATEWAYS, DEFAULT_WEBTORRENT_TRACKERS,
-  isHttp, isIpfs, isMagnet, ipfsGatewayUrls, fetchFirstOk, webtorrentText,
+  isHttp, isIpfs, isMagnet, isArweave, ipfsGatewayUrls, arweaveGatewayUrls,
+  fetchFirstOk, webtorrentText,
 } from './resolve.js';
 
 const LAYOUT_MODES = ['split', 'slides-focus', 'video-focus', 'overlap'];
@@ -54,6 +55,10 @@ export async function loadPresentation(source) {
   } else if (isIpfs(s)) {
     const { res, url } = await fetchFirstOk(
       ipfsGatewayUrls(s, DEFAULT_IPFS_GATEWAYS), 'manifest (ipfs)');
+    raw = await res.json();
+    baseUrl = url; // sibling assets resolve through the same gateway
+  } else if (isArweave(s)) {
+    const { res, url } = await fetchFirstOk(arweaveGatewayUrls(s), 'manifest (arweave)');
     raw = await res.json();
     baseUrl = url; // sibling assets resolve through the same gateway
   } else {
@@ -99,6 +104,10 @@ async function fetchJsonFrom(src, baseUrl, what) {
   }
   if (isIpfs(src)) {
     const { res } = await fetchFirstOk(ipfsGatewayUrls(src), what);
+    return res.json();
+  }
+  if (isArweave(src)) {
+    const { res } = await fetchFirstOk(arweaveGatewayUrls(src), what);
     return res.json();
   }
   return fetchJson(new URL(src, baseUrl).href, what);
@@ -197,6 +206,8 @@ function normaliseDeckSources(deck, baseUrl, gateways) {
     if (isIpfs(src)) {
       // Expand into one fallback entry per gateway so the deck loader tries each.
       for (const u of ipfsGatewayUrls(src, gateways)) out.push({ src: u });
+    } else if (isArweave(src)) {
+      for (const u of arweaveGatewayUrls(src)) out.push({ src: u });
     } else if (isMagnet(src)) {
       out.push({ src }); // the deck adapter fetches a Blob URL from the swarm
     } else {
@@ -259,6 +270,7 @@ function resolveSrc(src, baseUrl, gateways) {
   if (typeof src !== 'string') return src;
   if (isMagnet(src)) return src;
   if (isIpfs(src)) return ipfsGatewayUrls(src, gateways)[0];
+  if (isArweave(src)) return arweaveGatewayUrls(src)[0];
   if (isHttp(src) || src.startsWith('/') || src.startsWith('./') ||
       src.includes('/') || /\.[a-z0-9]+$/i.test(src)) {
     return new URL(src, baseUrl).href;

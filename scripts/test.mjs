@@ -7,9 +7,13 @@
 
 import assert from 'node:assert/strict';
 import {
-  isMagnet, isIpfs, isHttp, ipfsPath, ipfsGatewayUrls, httpCandidates,
+  isMagnet, isIpfs, isHttp, isArweave, ipfsPath, ipfsGatewayUrls,
+  arweavePath, arweaveGatewayUrls, httpCandidates,
   encodeBase64, decodeBase64, DEFAULT_IPFS_GATEWAYS,
 } from '../docs/src/resolve.js';
+import {
+  persistProviders, DEFAULT_PERSIST_PROVIDER, PaymentNotConfiguredError,
+} from '../docs/src/persist/index.js';
 import { normaliseManifest } from '../docs/src/manifest.js';
 import { SyncEngine } from '../docs/src/sync.js';
 import { validate } from '../docs/src/schema-validate.js';
@@ -341,6 +345,123 @@ test('schema: a signed manifest validates; a sig missing fields is flagged', () 
   assert.ok(!r.valid && r.errors.some((e) => /signature/.test(e.path)));
   const bad2 = JSON.parse(JSON.stringify(signed)); bad2.sig.alg = 'rsa';
   assert.ok(!validate(bad2, SCHEMA).valid);
+});
+
+// --- arweave (ar://) transport ---------------------------------------------
+test('isArweave + arweavePath + gateway expansion', () => {
+  assert.ok(isArweave('ar://abc123'));
+  assert.ok(isArweave('  AR://abc123/poster.png '));
+  assert.ok(!isArweave('https://arweave.net/abc'));
+  assert.equal(arweavePath('ar://TX/sub/a.mp4'), 'TX/sub/a.mp4');
+  const urls = arweaveGatewayUrls('ar://TX/a.mp4');
+  assert.equal(urls[0], 'https://arweave.net/TX/a.mp4');
+  assert.equal(urls[1], 'https://ar-io.net/TX/a.mp4');
+  assert.equal(httpCandidates('ar://TX')[0], 'https://arweave.net/TX');
+});
+test('normalise: ar:// video (mp4) resolves to gateway; deck ar:// expands', () => {
+  const m = normaliseManifest({
+    p2present: '1.0', title: 'AR',
+    video: { sources: [{ provider: 'mp4', src: 'ar://VIDTX/talk.mp4' }], poster: 'ar://POSTERTX' },
+    deck: { type: 'html', sources: [{ src: 'ar://DECKTX/index.html' }] },
+    timing: [{ time: 0, slide: 1 }],
+  }, BASE);
+  assert.equal(m.video.sources[0].src, 'https://arweave.net/VIDTX/talk.mp4');
+  assert.equal(m.video.poster, 'https://arweave.net/POSTERTX');
+  assert.equal(m.deck.sources[0].src, 'https://arweave.net/DECKTX/index.html');
+  assert.equal(m.deck.sources[1].src, 'https://ar-io.net/DECKTX/index.html'); // gateway 2
+});
+
+// --- persistence providers (mock uploads) ----------------------------------
+// A fake Response factory + a recording fetch so providers never hit the network.
+function fakeRes({ ok = true, status = 200, json, text = '' } = {}) {
+  return { ok, status, async json() { return json; }, async text() { return text; } };
+}
+function recordingFetch(reply) {
+  const calls = [];
+  const fn = async (url, init) => { calls.push({ url, init }); return reply(url, init); };
+  fn.calls = calls;
+  return fn;
+}
+const aFile = (name = 'note.txt', body = 'hi', type = 'text/plain') =>
+  new File([body], name, { type });
+const provider = (id, config, deps) => new (persistProviders.get(id))(config, deps);
+
+test('persist registry: arweave is the default + permanent; all schemes present', () => {
+  assert.equal(DEFAULT_PERSIST_PROVIDER, 'arweave');
+  assert.deepEqual(persistProviders.list(), ['arweave', 'pinning', 'seedbox', 's3']);
+  const A = persistProviders.get('arweave');
+  assert.equal(A.scheme, 'ar');
+  assert.equal(A.permanent, true);
+  assert.deepEqual(
+    ['pinning', 'seedbox', 's3'].map((id) => persistProviders.get(id).scheme),
+    ['ipfs', 'magnet', 'https']);
+});
+
+test('pinning (pinata): mock pin → ipfs:// ref + gateway; missing token throws', async () => {
+  const fetch = recordingFetch(() => fakeRes({ json: { IpfsHash: 'bafkMOCKCID' } }));
+  const p = provider('pinning', { service: 'pinata', token: 'JWT' }, { fetch });
+  const r = await p.put(aFile());
+  assert.equal(r.ref, 'ipfs://bafkMOCKCID');
+  assert.equal(r.scheme, 'ipfs');
+  assert.equal(r.gateway, 'https://bafkMOCKCID.ipfs.dweb.link');
+  assert.match(fetch.calls[0].url, /pinata\.cloud/);
+  await assert.rejects(
+    provider('pinning', { service: 'pinata' }, { fetch }).put(aFile()), /token/i);
+});
+test('pinning (web3.storage): mock upload → ipfs:// from {cid}', async () => {
+  const fetch = recordingFetch(() => fakeRes({ json: { cid: 'bafkW3' } }));
+  const r = await provider('pinning', { service: 'web3storage', token: 'T' }, { fetch }).put(aFile());
+  assert.equal(r.ref, 'ipfs://bafkW3');
+  assert.match(fetch.calls[0].url, /web3\.storage/);
+});
+
+test('s3/https: PUT to presigned URL → public https ref (query stripped)', async () => {
+  const fetch = recordingFetch(() => fakeRes({}));
+  const r = await provider('s3', { putUrl: 'https://b.s3.aws/key?X-Sig=abc' }, { fetch }).put(aFile());
+  assert.equal(r.ref, 'https://b.s3.aws/key');     // query dropped by default
+  assert.equal(r.scheme, 'https');
+  assert.equal(fetch.calls[0].init.method, 'PUT');
+  // explicit publicUrl wins
+  const r2 = await provider('s3',
+    { putUrl: 'https://up/x?sig=1', publicUrl: 'https://cdn/x' }, { fetch }).put(aFile());
+  assert.equal(r2.ref, 'https://cdn/x');
+});
+
+test('arweave: with an upload endpoint → ar:// ref + permanent + gateway', async () => {
+  const fetch = recordingFetch(() => fakeRes({ json: { id: 'TX42' } }));
+  const r = await provider('arweave', { endpoint: 'https://node/tx', token: 'k' }, { fetch }).put(aFile());
+  assert.equal(r.ref, 'ar://TX42');
+  assert.equal(r.scheme, 'ar');
+  assert.equal(r.permanent, true);
+  assert.equal(r.gateway, 'https://arweave.net/TX42');
+  assert.equal(fetch.calls[0].init.headers.Authorization, 'Bearer k');
+});
+test('arweave: no endpoint + no payment rail → PaymentNotConfiguredError (documented, not a crash)', async () => {
+  const err = await provider('arweave', {}, {}).put(aFile()).then(() => null, (e) => e);
+  assert.ok(err instanceof PaymentNotConfiguredError, String(err));
+  assert.match(err.message, /permanent/i);
+});
+test('arweave: a wired payment rail funds, but still needs an endpoint to spend it', async () => {
+  const payments = { stripe: async () => ({ receipt: 'rcpt_1' }) };
+  const err = await provider('arweave', {}, { payments }).put(aFile()).then(() => null, (e) => e);
+  assert.ok(err instanceof PaymentNotConfiguredError);
+  assert.match(err.message, /upload endpoint/i);
+});
+
+test('seedbox: in-tab seed → magnet ref; seedbox URL marks it always-on', async () => {
+  const wtClient = { seed: (file, opts, cb) => cb({ magnetURI: 'magnet:?xt=urn:btih:deadbeef' }) };
+  const getWebTorrent = async () => wtClient;
+  const r = await provider('seedbox', { trackers: 'wss://t1\n wss://t2 ' }, { getWebTorrent }).put(aFile('v.mp4'));
+  assert.equal(r.ref, 'magnet:?xt=urn:btih:deadbeef');
+  assert.equal(r.scheme, 'magnet');
+  assert.equal(r.extra.alwaysOn, false);
+  // with a seedbox endpoint that accepts the magnet → alwaysOn
+  const fetch = recordingFetch(() => fakeRes({}));
+  const r2 = await provider('seedbox',
+    { seedboxUrl: 'https://seed/box', seedboxToken: 'tk' }, { getWebTorrent, fetch }).put(aFile('v.mp4'));
+  assert.equal(r2.extra.alwaysOn, true);
+  assert.match(fetch.calls[0].init.body, /magnet:/);
+  assert.equal(fetch.calls[0].init.headers.Authorization, 'Bearer tk');
 });
 
 // --- runner ----------------------------------------------------------------

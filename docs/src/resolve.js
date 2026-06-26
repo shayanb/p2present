@@ -15,6 +15,11 @@ export const DEFAULT_WEBTORRENT_TRACKERS = [
   'wss://tracker.webtorrent.dev',
   'wss://tracker.files.fm:7073/announce',
 ];
+// Arweave permaweb gateways, tried in order. ar://<txid> → <gateway>/<txid>.
+export const DEFAULT_ARWEAVE_GATEWAYS = [
+  'https://arweave.net',
+  'https://ar-io.net',
+];
 
 // --- recognisers -----------------------------------------------------------
 
@@ -32,6 +37,23 @@ export function isIpfs(s) {
 
 export function isHttp(s) {
   return typeof s === 'string' && /^https?:\/\//i.test(s.trim());
+}
+
+// ar:// URI (Arweave transaction id), optionally with a path.
+export function isArweave(s) {
+  return typeof s === 'string' && /^ar:\/\//i.test(s.trim());
+}
+
+// Strip the ar:// prefix → "<txid>[/<path>]".
+export function arweavePath(uri) {
+  return String(uri).trim().replace(/^ar:\/\//i, '');
+}
+
+/** Expand an ar:// URI into an ordered list of HTTP gateway URLs to try. */
+export function arweaveGatewayUrls(uri, gateways = DEFAULT_ARWEAVE_GATEWAYS) {
+  const path = arweavePath(uri);
+  return (gateways && gateways.length ? gateways : DEFAULT_ARWEAVE_GATEWAYS)
+    .map((g) => g.replace(/\/+$/, '') + '/' + path);
 }
 
 // Strip the ipfs:// (or ipfs/) prefix → "<cid>[/<path>]".
@@ -65,6 +87,7 @@ export function ipfsGatewayUrls(uri, gateways = DEFAULT_IPFS_GATEWAYS) {
  */
 export function httpCandidates(source, gateways) {
   if (isIpfs(source)) return ipfsGatewayUrls(source, gateways);
+  if (isArweave(source)) return arweaveGatewayUrls(source);
   if (isMagnet(source)) return [];
   return [source];
 }
