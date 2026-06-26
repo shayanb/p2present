@@ -161,7 +161,10 @@ export class Player {
     this.scrub.setAttribute('aria-label', 'Seek video');
     this.scrub.addEventListener('input', () => {
       const dur = this.video.getDuration() || 0;
-      this.video.seek((this.scrub.value / 1000) * dur);
+      // The scrubber is authoritative over the VIDEO: seek it AND jump the deck to
+      // the slide at that time together (sync.seekToTime), rather than only nudging
+      // the video and waiting for the poll loop to catch up.
+      this.sync.seekToTime((this.scrub.value / 1000) * dur);
       this._showPreviewAtFraction(this.scrub.value / 1000);   // keep preview while dragging
     });
     this._buildScrubPreview(bar);

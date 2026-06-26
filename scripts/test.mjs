@@ -11,6 +11,7 @@ import {
   encodeBase64, decodeBase64, DEFAULT_IPFS_GATEWAYS,
 } from '../docs/src/resolve.js';
 import { normaliseManifest } from '../docs/src/manifest.js';
+import { SyncEngine } from '../docs/src/sync.js';
 import { validate } from '../docs/src/schema-validate.js';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -148,6 +149,53 @@ test('normalise: rejects missing video/deck', () => {
 });
 test('normalise: rejects empty sources', () => {
   assert.throws(() => normaliseManifest({ video: { sources: [] }, deck: { type: 'html', sources: [{ src: 'a' }] } }, BASE), /video\.sources/);
+});
+
+// --- sync engine: timeline seek (bug-1 regression) -------------------------
+// A fake video/deck so we can drive SyncEngine without a DOM. The scrubber is
+// authoritative over the VIDEO: seekToTime must seek the video to the EXACT time
+// (not the slide's cue time) and move the deck to the slide mapped to that time.
+function fakeRig({ time = 0 } = {}) {
+  const video = {
+    _t: time, _playing: false,
+    seek(s) { this._t = s; }, getTime() { return this._t; },
+    getDuration() { return 1000; }, isPlaying() { return this._playing; },
+  };
+  const deck = {
+    _current: 1, slideCount: 23, _handlers: {},
+    on(ev, fn) { (this._handlers[ev] ||= []).push(fn); },
+    goTo(n) { this._current = n; },
+    get currentSlide() { return this._current; },
+  };
+  const cues = [
+    { time: 0, slide: 1 }, { time: 100, slide: 2 }, { time: 500, slide: 6 },
+    { time: 900, slide: 12 },
+  ];
+  return { video, deck, sync: new SyncEngine({ video, deck, cues }) };
+}
+test('sync.seekToTime: seeks video to the EXACT time + jumps the deck', () => {
+  const { video, deck, sync } = fakeRig();
+  sync.seekToTime(500);
+  assert.equal(video.getTime(), 500);         // exact scrub time, not snapped
+  assert.equal(deck.currentSlide, 6);         // slide mapped to t=500
+});
+test('sync.seekToTime: preserves a non-cue-boundary time', () => {
+  const { video, deck, sync } = fakeRig();
+  sync.seekToTime(640);                        // between cue 500(s6) and 900(s12)
+  assert.equal(video.getTime(), 640);          // NOT snapped to 500
+  assert.equal(deck.currentSlide, 6);          // still on slide 6
+});
+test('sync.seekToTime: when unlinked, seeks video but leaves the deck', () => {
+  const { video, deck, sync } = fakeRig();
+  sync.setLinked(false);
+  sync.seekToTime(900);
+  assert.equal(video.getTime(), 900);          // video still seeks (authoritative)
+  assert.equal(deck.currentSlide, 1);          // deck untouched while unlinked
+});
+test('sync.seekToTime: clamps negative time to 0', () => {
+  const { video, sync } = fakeRig({ time: 300 });
+  sync.seekToTime(-50);
+  assert.equal(video.getTime(), 0);
 });
 
 // --- schema validation (builder) -------------------------------------------

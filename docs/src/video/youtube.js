@@ -32,6 +32,7 @@ function extractId(src) {
 export class YouTubeProvider extends BaseVideoProvider {
   async load() {
     const YT = await loadYouTubeAPI();
+    this._YT = YT;
     const id = extractId(this.src);
     const host = document.createElement('div');
     this.mount.appendChild(host);
@@ -40,9 +41,18 @@ export class YouTubeProvider extends BaseVideoProvider {
         videoId: id,
         playerVars: { rel: 0, modestbranding: 1, playsinline: 1, controls: 1 },
         events: {
-          onReady: () => resolve(),
+          onReady: () => {
+            this._ready = true;
+            // Apply any seek issued before the iframe API became ready (the
+            // scrubber can race onReady on a cold load).
+            if (this._pendingSeek != null) {
+              const s = this._pendingSeek; this._pendingSeek = null;
+              this.seek(s);
+            }
+            resolve();
+          },
           onStateChange: (e) => {
-            if (e.data === YT.PlayerState.PLAYING) { this._playing = true; this.emit('play'); }
+            if (e.data === YT.PlayerState.PLAYING) { this._playing = true; this._everPlayed = true; this.emit('play'); }
             else if (e.data === YT.PlayerState.PAUSED) { this._playing = false; this.emit('pause'); }
             else if (e.data === YT.PlayerState.ENDED) { this._playing = false; this.emit('ended'); }
           },
@@ -53,7 +63,21 @@ export class YouTubeProvider extends BaseVideoProvider {
   }
   play() { this.player?.playVideo(); }
   pause() { this.player?.pauseVideo(); }
-  seek(seconds) { this.player?.seekTo(seconds, true); }
+  // Authoritative seek. Queue it if the player isn't ready yet, then on a cold
+  // (never-started: UNSTARTED/CUED) player kick playback so the video actually
+  // moves to the seeked position instead of sitting on the poster at 0. A player
+  // that's already playing keeps playing; a deliberately paused one stays paused.
+  seek(seconds) {
+    if (!this._ready || !this.player?.seekTo) { this._pendingSeek = seconds; return; }
+    const YT = this._YT || window.YT;
+    let state;
+    try { state = this.player.getPlayerState?.(); } catch { state = undefined; }
+    this.player.seekTo(seconds, true);
+    const PS = YT?.PlayerState;
+    const cold = !this._everPlayed
+      || (PS && (state === PS.UNSTARTED || state === PS.CUED));
+    if (cold) { try { this.player.playVideo(); } catch {} }
+  }
   getTime() { return this.player?.getCurrentTime?.() || 0; }
   getDuration() { return this.player?.getDuration?.() || 0; }
   setRate(rate) { this.player?.setPlaybackRate?.(rate); }

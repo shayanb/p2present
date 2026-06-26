@@ -95,6 +95,8 @@ async function run({ source, share, display }) {
     $app.innerHTML = '';
     player = new Player(manifest, $app);
     await player.mount();
+    // Expose the live player for debugging + headless tests (read-only handle).
+    window.__p2player = player;
     const deep = parseDeepLink();
     if (deep) { try { player.applyDeepLink(deep); } catch (e) { console.warn(e); } }
     setStatus('');

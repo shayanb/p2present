@@ -120,6 +120,26 @@ export class SyncEngine {
   nextSlide() { this.gotoSlide(this.deck.currentSlide + 1); }
   prevSlide() { this.gotoSlide(this.deck.currentSlide - 1); }
 
+  /**
+   * Timeline-driven seek (the scrubber is authoritative over the VIDEO): jump the
+   * video to the exact `time` and, when linked, move the deck to the slide that
+   * maps to that time — BOTH together. Unlike gotoSlide(), this keeps the precise
+   * scrub time instead of snapping the video to the slide's cue time. Play/pause
+   * state is owned by the provider's seek (paused stays paused; playing keeps
+   * playing; a cold provider begins at the seeked position).
+   */
+  seekToTime(time) {
+    const t = Math.max(0, Number(time) || 0);
+    this.video.seek(t);
+    if (this.linked) {
+      const slide = this.slideAtTime(t);
+      const direction = slide >= this.deck.currentSlide ? 1 : -1;
+      this.deck.goTo(slide, { transition: 'cut', direction });
+      this._lastPushedSlide = slide;
+    }
+    this._emit();
+  }
+
   // --- state broadcast -----------------------------------------------------
 
   _emit() {
