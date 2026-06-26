@@ -70,6 +70,9 @@ export class Player {
     stage.append(deckPane, divider, videoPane);
     const controls = el('div', 'p2-controls');
     this.root.append(stage, controls);
+    // The controls element exists before video/deck loading finishes; mark it as
+    // floating immediately so early paints/tests never see the old in-flow bar.
+    this.root.classList.add('p2-floating-controls', 'p2-controls-visible');
     // Subtle brand watermark in the stage corner — opaque mark, links home, and
     // tucked clear of the controls bar and centered captions.
     stage.appendChild(brandWatermark());

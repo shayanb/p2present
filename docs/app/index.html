@@ -27,7 +27,9 @@
   <header class="p2-header">
     <div class="p2-brand">
       <a class="p2-home" href="../" title="p2present home" aria-label="p2present home"><img class="p2-logo" src="../brand/icon-32.png" width="32" height="32" alt="" /></a>
-      <span class="p2-name">p2present</span>
+      <button class="p2-shell-toggle" id="shell-toggle" type="button" aria-expanded="true" aria-label="Collapse player header controls" title="Collapse player header controls">
+        <span class="p2-name">p2present</span>
+      </button>
       <span class="p2-deck-title" id="deck-title"></span>
       <span class="p2-sig-badge" id="sig-badge" hidden></span>
     </div>
@@ -87,7 +89,7 @@
     <a class="p2-nav-link" href="https://github.com/ibeezhan/p2present#readme">Docs</a>
   </nav>
 
-  <p class="p2-status" id="status" role="status" aria-live="polite"></p>
+  <div class="p2-status" id="status" role="status" aria-live="polite"></div>
 
   <main id="app" class="p2-app" aria-live="polite">
     <div class="p2-empty">Loading…</div>

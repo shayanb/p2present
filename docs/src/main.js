@@ -37,6 +37,7 @@ const $app = document.getElementById('app');
 const $status = document.getElementById('status');
 const $title = document.getElementById('deck-title');
 const $header = document.querySelector('.p2-header');
+const $shellToggle = document.getElementById('shell-toggle');
 const $sourceToggle = document.getElementById('source-toggle');
 const $share = document.getElementById('share-btn');
 const $shareMenu = document.getElementById('share-menu');
@@ -59,10 +60,40 @@ function parseDeepLink() {
 let player = null;
 let shareValue = '';   // the string a Share link should base64-encode
 let currentRaw = null; // the raw manifest currently playing (for "Save & share")
+let statusSeq = 0;
+let activeStatus = null;
 
-function setStatus(msg, isError = false) {
-  $status.textContent = msg || '';
-  $status.classList.toggle('is-error', !!isError);
+function setStatus(msg, isError = false, opts = {}) {
+  if (!$status) return;
+  if (!msg) {
+    $status.innerHTML = '';
+    activeStatus = null;
+    return;
+  }
+  const kind = isError ? 'error' : (opts.working ? 'working' : 'note');
+  const item = document.createElement('div');
+  item.className = `p2-status-item is-${kind}`;
+  item.dataset.statusId = String(++statusSeq);
+  item.innerHTML =
+    `<span class="p2-status-dot" aria-hidden="true"></span>` +
+    `<span class="p2-status-text"></span>` +
+    (isError ? `<button class="p2-status-close" type="button" aria-label="Close status">×</button>` : '');
+  item.querySelector('.p2-status-text').textContent = msg;
+  if (isError) item.querySelector('.p2-status-close')?.addEventListener('click', () => dismissStatus(item));
+  $status.replaceChildren(item);
+  activeStatus = item;
+  if (!isError && !opts.working) {
+    const timeout = opts.timeout ?? 3600;
+    window.setTimeout(() => { if (item.isConnected && activeStatus === item) dismissStatus(item); }, timeout);
+  }
+}
+
+function dismissStatus(item) {
+  item.classList.add('is-leaving');
+  window.setTimeout(() => {
+    if (item.isConnected) item.remove();
+    if (activeStatus === item) activeStatus = null;
+  }, 280);
 }
 
 // Bundled content paths resolve against the docs ROOT (not the /app/ page URL).
@@ -110,7 +141,7 @@ function parseBootSource() {
 }
 
 async function run({ source, share, display }) {
-  setStatus('Loading…');
+  setStatus('Loading…', false, { working: true });
   if (player) { try { player.destroy(); } catch {} player = null; }
   $app.innerHTML = '<div class="p2-empty">Loading…</div>';
   shareValue = share || '';
@@ -226,7 +257,7 @@ async function copyShareLink(withSpot) {
     setStatus(withSpot ? 'Link to this moment copied to clipboard.' : 'Presentation link copied to clipboard.');
   } catch {
     // Clipboard blocked (insecure context / permissions) — surface the link.
-    setStatus('Share link: ' + link);
+    setStatus('Share link: ' + link, false, { timeout: 8000 });
   }
   history.replaceState(null, '', link);
 }
@@ -255,15 +286,15 @@ async function saveAndShare() {
   if (!currentRaw) { setStatus('Nothing to save yet.', true); return; }
   const base = serviceBase();
   $save.disabled = true;
-  setStatus(`Saving to ${base}…`);
+  setStatus(`Saving to ${base}…`, false, { working: true });
   try {
     const { id, url } = await saveManifest(currentRaw, { visibility: 'unlisted' });
     const link = url || shareUrl(id);
     try {
       await navigator.clipboard.writeText(link);
-      setStatus(`Saved! Short link copied to clipboard: ${link}`);
+      setStatus(`Saved. Short link copied: ${link}`, false, { timeout: 6000 });
     } catch {
-      setStatus(`Saved! Share link: ${link}`);
+      setStatus(`Saved. Share link: ${link}`, false, { timeout: 9000 });
     }
   } catch (err) {
     setStatus(err.message || String(err), true);
@@ -286,6 +317,30 @@ $sourceToggle.addEventListener('click', () => {
   $sourceToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   if (open) $src.focus();
 });
+
+if ($shellToggle) {
+  const setShellState = ({ collapsed, pinned = false }) => {
+    $header.classList.toggle('p2-shell-collapsed', collapsed);
+    $header.classList.toggle('p2-shell-pinned', pinned);
+    const expanded = !collapsed || pinned;
+    $shellToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    $shellToggle.title = expanded ? 'Collapse player header controls' : 'Show player header controls';
+    $shellToggle.setAttribute('aria-label', $shellToggle.title);
+  };
+  $shellToggle.addEventListener('click', () => {
+    const collapsed = $header.classList.contains('p2-shell-collapsed');
+    const pinned = $header.classList.contains('p2-shell-pinned');
+    if (!collapsed) setShellState({ collapsed: true });
+    else setShellState({ collapsed: true, pinned: !pinned });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      setShellState({ collapsed: $header.classList.contains('p2-shell-collapsed') });
+      $header.classList.remove('p2-source-open');
+      $sourceToggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
 
 // Highlight the active demo in the nav (default boot === the html demo).
 (function markActiveDemo() {
