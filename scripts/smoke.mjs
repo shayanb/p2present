@@ -10,7 +10,10 @@
 //   - provider source-fallback: ipfs(dead) → mp4(local) yields a working <video>
 //   - fullscreen auto-hide overlay controls (immersive class + fixed overlay)
 //   - layout modes switch; subtitle CC menu present
-//   - PDF demo (?p=moav-pdf): pdf.js deck renders slide 1 visibly + syncs
+//   - timeline seek (mp4): scrubber seeks the VIDEO + jumps the slide together in
+//     paused AND playing states; YouTube cold-seek advances getCurrentTime (best-effort)
+//   - PDF demo (?p=moav-pdf): pdf.js deck renders slide 1 visibly + syncs; every
+//     slide stays non-blank sweeping forward AND backward (luminance regression)
 //   - scrubber thumbnail preview (PDF page render) appears on hover
 //   - deep-link hash (#t=…&slide=…) opens at the right time/slide
 //   - builder (/builder/): mounts, flags invalid, validates the demo, exports
@@ -60,6 +63,19 @@ const FIXTURES = {
     resolvers: { ipfsGateways: DEAD },
     layout: { split: 0.6, mode: 'split' },
   },
+  // A local-mp4 deck with several timing cues spread across the 63s clip, so a
+  // timeline seek can be asserted to move the VIDEO + jump to a distinct slide
+  // (deterministic + offline; the YouTube path is checked best-effort separately).
+  'seek.json': {
+    p2present: '1.0', title: 'Seek Fixture',
+    video: { sources: [{ provider: 'mp4', src: `${ORIGIN}/content/demo/slides/assets/nedagram-demo.mp4` }] },
+    deck: { type: 'html', sources: [{ src: `${ORIGIN}/content/demo/slides/index.html` }], slideCount: 23 },
+    timing: [
+      { time: 0, slide: 1 }, { time: 10, slide: 2 }, { time: 20, slide: 3 },
+      { time: 30, slide: 4 }, { time: 45, slide: 5 }, { time: 55, slide: 6 },
+    ],
+    layout: { split: 0.6, mode: 'split' },
+  },
 };
 
 function serve() {
@@ -79,13 +95,29 @@ function serve() {
       fs.stat(file, (err, st) => {
         if (err) { res.writeHead(404).end('not found'); return; }
         if (st.isDirectory()) file = path.join(file, 'index.html');
-        fs.readFile(file, (e2, buf) => {
-          if (e2) { res.writeHead(404).end('not found'); return; }
-          res.writeHead(200, {
-            'content-type': MIME[path.extname(file)] || 'application/octet-stream',
-            'access-control-allow-origin': '*',
-          });
-          res.end(buf);
+        fs.stat(file, (e0, st2) => {
+          if (e0) { res.writeHead(404).end('not found'); return; }
+          const type = MIME[path.extname(file)] || 'application/octet-stream';
+          const base = { 'content-type': type, 'access-control-allow-origin': '*', 'accept-ranges': 'bytes' };
+          // Honour HTTP Range so <video> can SEEK to unbuffered positions (without
+          // a 206 the browser refuses to move currentTime past what's buffered —
+          // which is exactly what the timeline-seek check exercises).
+          const range = req.headers.range;
+          const m = range && /^bytes=(\d*)-(\d*)$/.exec(range);
+          if (m) {
+            const size = st2.size;
+            let start = m[1] ? parseInt(m[1], 10) : 0;
+            let end = m[2] ? parseInt(m[2], 10) : size - 1;
+            if (Number.isNaN(start) || Number.isNaN(end) || start > end || end >= size) {
+              res.writeHead(416, { ...base, 'content-range': `bytes */${size}` }).end();
+              return;
+            }
+            res.writeHead(206, { ...base, 'content-range': `bytes ${start}-${end}/${size}`, 'content-length': end - start + 1 });
+            fs.createReadStream(file, { start, end }).pipe(res);
+            return;
+          }
+          res.writeHead(200, { ...base, 'content-length': st2.size });
+          fs.createReadStream(file).pipe(res);
         });
       });
     });
@@ -278,6 +310,85 @@ async function main() {
       await p.close();
     }
 
+    // === 3b. Timeline seek moves the VIDEO + slide together (bug-1 regression) ===
+    // The scrubber is authoritative over the video: dragging/clicking it must seek
+    // the provider AND jump to the slide for that time — in BOTH paused & playing
+    // states. Uses the deterministic local-mp4 fixture (offline). YouTube is checked
+    // best-effort below (needs network) since its known race was the original bug.
+    {
+      const p = await newPage(context);
+      await p.goto(`${ORIGIN}/?manifest=${encodeURIComponent(`${ORIGIN}/__fixtures__/seek.json`)}`, { waitUntil: 'load' });
+      await p.waitForSelector('.p2-video-pane video', { timeout: 20000 }).catch(() => {});
+      await p.waitForFunction(() => { const v = document.querySelector('.p2-video-pane video'); return v && v.duration > 1; }, { timeout: 15000 }).catch(() => {});
+
+      const seekTo = (frac) => p.evaluate((f) => {
+        const s = document.querySelector('.p2-scrub');
+        s.value = String(Math.round(f * 1000));
+        s.dispatchEvent(new Event('input', { bubbles: true }));   // == click/drag result
+      }, frac);
+      const snap = () => p.evaluate(() => {
+        const v = document.querySelector('.p2-video-pane video');
+        return { t: v?.currentTime || 0, dur: v?.duration || 0, paused: v ? v.paused : true,
+          slide: document.querySelector('.p2-slidecount')?.textContent || '' };
+      });
+
+      // PAUSED: seek to ~middle. Time jumps there; stays paused; slide moves.
+      await p.evaluate(() => document.querySelector('.p2-video-pane video')?.pause());
+      const before = await snap();
+      await seekTo(0.5);
+      await p.waitForTimeout(300);
+      const pausedSeek = await snap();
+      ok('seek(paused): video.currentTime jumps to the seek point',
+        Math.abs(pausedSeek.t - pausedSeek.dur * 0.5) < 4 && pausedSeek.t > before.t + 1,
+        `t=${pausedSeek.t.toFixed(1)} dur=${pausedSeek.dur.toFixed(1)}`);
+      ok('seek(paused): stays paused at that frame', pausedSeek.paused);
+      ok('seek(paused): slide jumps with the video', pausedSeek.slide !== before.slide, `${before.slide} -> ${pausedSeek.slide}`);
+
+      // PLAYING: play, then seek elsewhere. Time jumps; keeps playing; slide moves.
+      await p.evaluate(() => document.querySelector('.p2-video-pane video')?.play().catch(() => {}));
+      await p.waitForTimeout(400);
+      const playBefore = await snap();
+      await seekTo(0.85);
+      await p.waitForTimeout(300);
+      const playSeek = await snap();
+      ok('seek(playing): video.currentTime jumps to the seek point',
+        Math.abs(playSeek.t - playSeek.dur * 0.85) < 6,
+        `t=${playSeek.t.toFixed(1)} dur=${playSeek.dur.toFixed(1)}`);
+      ok('seek(playing): keeps playing from there', !playSeek.paused);
+      ok('seek(playing): slide jumps with the video', playSeek.slide !== playBefore.slide, `${playBefore.slide} -> ${playSeek.slide}`);
+      await p.close();
+    }
+
+    // === 3c. YouTube cold-seek (best-effort; needs network) ===
+    // The original bug: seeking before pressing play left the YouTube iframe stuck
+    // on the poster at 0. With the fix a cold seek must advance getCurrentTime().
+    // Skipped (counted as pass) when the iframe API can't load in this environment.
+    {
+      const p = await newPage(context);
+      await p.goto(`${ORIGIN}/?p=demo`, { waitUntil: 'load' });
+      await p.waitForSelector('.p2-deck-frame', { timeout: 30000 }).catch(() => {});
+      // Wait until the YT provider reports a real duration (i.e. the API loaded).
+      const ytReady = await p.waitForFunction(
+        () => (window.__p2player?.video?.getDuration?.() || 0) > 1,
+        { timeout: 12000 }).then(() => true).catch(() => false);
+      if (!ytReady) {
+        ok('youtube: cold-seek advances the video (skipped — API offline)', true, 'no network');
+      } else {
+        const t0 = await p.evaluate(() => window.__p2player.video.getTime());
+        // Cold seek to ~40% via the scrubber, never having pressed play.
+        await p.evaluate(() => {
+          const v = window.__p2player.video, dur = v.getDuration();
+          window.__p2player.sync.seekToTime(dur * 0.4);
+        });
+        const advanced = await p.waitForFunction(
+          (prev) => window.__p2player.video.getTime() > prev + 5,
+          t0, { timeout: 8000 }).then(() => true).catch(() => false);
+        const t1 = await p.evaluate(() => window.__p2player.video.getTime());
+        ok('youtube: cold-seek advances the video (not stuck at 0)', advanced, `t0=${t0?.toFixed?.(1)} -> t1=${t1?.toFixed?.(1)}`);
+      }
+      await p.close();
+    }
+
     // === 4. p2p routing reaches real loading/fallback (not "coming soon") ===
     for (const [label, src, shot] of [
       ['ipfs://', 'ipfs://bafkreideadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef/p2present.json', 'ipfs-loading.png'],
@@ -334,21 +445,38 @@ async function main() {
         }
         return { visible: vis.length, opacity: c ? getComputedStyle(c).opacity : null, lum, slide: document.querySelector('.p2-slidecount')?.textContent };
       });
-      let blackOrHidden = [];
-      for (let i = 0; i < 7; i++) {
-        await p.click('.p2-btn[aria-label^="Next"]');
-        await p.waitForTimeout(620);   // > slowest transition (slide 360ms)
+      // Drive to a slide via its authored transition (exercises cut/fade/slide on
+      // BOTH directions — the back-and-forth black-slide path).
+      const nav = (n) => p.evaluate((n) => {
+        const cues = window.__p2player.sync.cues;
+        const cue = cues.find((c) => c.slide === n);
+        return window.__p2player.deck.goTo(n, { transition: cue?.transition || 'cut' });
+      }, n);
+      const total = await p.evaluate(() => window.__p2player.deck.slideCount);
+      const blackOrHidden = [];
+      const check = (m) => m.visible === 1 && parseFloat(m.opacity) > 0.95 && typeof m.lum === 'number' && m.lum > 8;
+      // FORWARD across every slide 1 → N.
+      for (let n = 2; n <= total; n++) {
+        await nav(n);
+        await p.waitForTimeout(120);
         const m = await measure();
-        const good = m.visible === 1 && parseFloat(m.opacity) > 0.95 && typeof m.lum === 'number' && m.lum > 8;
-        if (!good) blackOrHidden.push(`${m.slide}:vis=${m.visible},op=${m.opacity},lum=${m.lum}`);
+        if (!check(m)) blackOrHidden.push(`fwd ${m.slide}:vis=${m.visible},op=${m.opacity},lum=${m.lum}`);
       }
-      // Stress overlapping transitions, then back down — must still land clean.
-      for (let i = 0; i < 4; i++) await p.click('.p2-btn[aria-label^="Next"]');
-      await p.waitForTimeout(800);
+      // BACKWARD across every slide N → 1 (where the bug bit hardest).
+      for (let n = total - 1; n >= 1; n--) {
+        await nav(n);
+        await p.waitForTimeout(120);
+        const m = await measure();
+        if (!check(m)) blackOrHidden.push(`rev ${m.slide}:vis=${m.visible},op=${m.opacity},lum=${m.lum}`);
+        if (n === Math.round(total / 2)) await p.screenshot({ path: path.join(SHOTS, 'pdf-reverse.png') });
+      }
+      ok(`pdf demo: all ${total} slides render non-blank forward AND backward`, blackOrHidden.length === 0, blackOrHidden.slice(0, 4).join(' | '));
+
+      // Stress overlapping transitions (rapid fire, then back down) — must land clean.
+      for (let i = 0; i < 5; i++) p.click('.p2-btn[aria-label^="Next"]').catch(() => {});
+      await p.waitForTimeout(900);
       const rapid = await measure();
-      const rapidGood = rapid.visible === 1 && parseFloat(rapid.opacity) > 0.95 && rapid.lum > 8;
-      ok('pdf demo: 7 slides render non-blank through transitions', blackOrHidden.length === 0, blackOrHidden.join(' | '));
-      ok('pdf demo: rapid overlapping transitions land on one visible slide', rapidGood, JSON.stringify(rapid));
+      ok('pdf demo: rapid overlapping transitions land on one visible slide', check(rapid), JSON.stringify(rapid));
       await p.click('.p2-link');     // re-link sync for any later checks
 
       // --- scrubber thumbnail preview (PDF renders real page thumbnails) ---
