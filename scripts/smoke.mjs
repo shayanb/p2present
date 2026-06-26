@@ -287,6 +287,40 @@ async function main() {
       await p.waitForTimeout(500);
       await p.screenshot({ path: path.join(SHOTS, 'pdf-demo.png') });
 
+      // --- regression: every PDF slide renders + STAYS visible (the black-slide
+      // bug). Unlink sync so the (paused) video can't fight deck navigation, then
+      // walk N slides through cut/fade/slide transitions. After each step exactly
+      // ONE canvas must be visible at full opacity with real (non-black) pixels.
+      await p.click('.p2-link');     // unlink sync
+      const measure = () => p.evaluate(() => {
+        const cs = [...document.querySelectorAll('.p2-pdf-page')];
+        const vis = cs.filter((c) => c.style.display !== 'none' && getComputedStyle(c).display !== 'none');
+        const c = vis[0];
+        let lum = null;
+        if (c) {
+          const tmp = document.createElement('canvas'); tmp.width = 32; tmp.height = 24;
+          const ctx = tmp.getContext('2d');
+          try { ctx.drawImage(c, 0, 0, 32, 24); const d = ctx.getImageData(0, 0, 32, 24).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += (d[i] + d[i + 1] + d[i + 2]) / 3; lum = Math.round(s / (32 * 24)); } catch { lum = -1; }
+        }
+        return { visible: vis.length, opacity: c ? getComputedStyle(c).opacity : null, lum, slide: document.querySelector('.p2-slidecount')?.textContent };
+      });
+      let blackOrHidden = [];
+      for (let i = 0; i < 7; i++) {
+        await p.click('.p2-btn[aria-label^="Next"]');
+        await p.waitForTimeout(620);   // > slowest transition (slide 360ms)
+        const m = await measure();
+        const good = m.visible === 1 && parseFloat(m.opacity) > 0.95 && typeof m.lum === 'number' && m.lum > 8;
+        if (!good) blackOrHidden.push(`${m.slide}:vis=${m.visible},op=${m.opacity},lum=${m.lum}`);
+      }
+      // Stress overlapping transitions, then back down — must still land clean.
+      for (let i = 0; i < 4; i++) await p.click('.p2-btn[aria-label^="Next"]');
+      await p.waitForTimeout(800);
+      const rapid = await measure();
+      const rapidGood = rapid.visible === 1 && parseFloat(rapid.opacity) > 0.95 && rapid.lum > 8;
+      ok('pdf demo: 7 slides render non-blank through transitions', blackOrHidden.length === 0, blackOrHidden.join(' | '));
+      ok('pdf demo: rapid overlapping transitions land on one visible slide', rapidGood, JSON.stringify(rapid));
+      await p.click('.p2-link');     // re-link sync for any later checks
+
       // --- scrubber thumbnail preview (PDF renders real page thumbnails) ---
       const box = await p.$eval('.p2-scrub', (el) => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
       await p.mouse.move(box.x + box.w * 0.55, box.y + box.h / 2);

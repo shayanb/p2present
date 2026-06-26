@@ -161,9 +161,14 @@ body {
    they don't collide with the video's own control bar. */
 .p2-video-pane video::cue { background: rgba(0,0,0,0.72); }
 
-/* PDF deck */
-.p2-pdf-stage { position: absolute; inset: 0; display: grid; place-items: center; background: #000; }
-.p2-pdf-page { max-width: 100%; max-height: 100%; object-fit: contain; }
+/* PDF deck — pages are absolutely-stacked + centred so that during a fade/slide
+   transition the outgoing and incoming canvases overlap (rather than tiling into
+   two grid rows). The adapter keeps exactly one visible outside of transitions. */
+.p2-pdf-stage { position: absolute; inset: 0; background: #000; }
+.p2-pdf-page {
+  position: absolute; inset: 0; margin: auto;
+  max-width: 100%; max-height: 100%; object-fit: contain;
+}
 
 /* --- controls --- */
 .p2-controls {

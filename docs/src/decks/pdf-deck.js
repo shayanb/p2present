@@ -4,6 +4,15 @@
 // stays build-free. Each PDF page is a slide (1-based, matching manifest sync).
 // Page canvases are rendered on demand and cached; slide swaps use the shared
 // transition registry so cut/fade/slide/none all work here.
+//
+// Visibility is owned authoritatively by the adapter, NOT by the transition.
+// Every navigation ends in _commit(), which forces exactly one canvas visible
+// (display + opacity reset, stray Web-Animations cancelled) and hides the rest.
+// This is what keeps slides from going black: a transition's persisted opacity/
+// transform fill (or an overlapping/superseded transition) can no longer leave a
+// canvas shown-but-transparent or hidden-but-current — _commit always reconciles
+// to the real target slide. A monotonic nav token means only the newest goTo()
+// finalizes, so rapid slide changes can't fight each other.
 
 import { BaseDeckAdapter } from './base.js';
 import { getTransition } from '../transitions/index.js';
@@ -25,9 +34,10 @@ export class PdfDeckAdapter extends BaseDeckAdapter {
     this._total = this.doc.numPages;
     this._canvases = new Map();
     this._thumbs = new Map();
-    const first = await this._ensurePage(1);
-    first.style.display = '';     // reveal slide 1 (goTo(1) would early-return)
+    this._navToken = 0;
+    await this._ensurePage(1);
     this._current = 1;
+    this._commit(1);            // reveal slide 1 in a known-good state
     this.emit('ready');
   }
 
@@ -52,17 +62,57 @@ export class PdfDeckAdapter extends BaseDeckAdapter {
   /** @param {number} slide 1-based */
   async goTo(slide, opts = {}) {
     const n = Math.min(this.slideCount, Math.max(1, Math.floor(slide)));
-    if (n === this._current && this._canvases.has(n)) return;
+    // Re-run even when n === _current if the current canvas isn't actually shown
+    // (e.g. a prior transition left it hidden) so we always self-heal to visible.
+    if (n === this._current && this._isShown(n)) return;
+    const token = ++this._navToken;
     const direction = opts.direction ?? (n >= this._current ? 1 : -1);
     const outgoing = this._canvases.get(this._current);
     const incoming = await this._ensurePage(n);
+    if (token !== this._navToken) return;     // superseded while awaiting render
     // Prefetch the neighbour in the travel direction.
     const ahead = n + direction;
     if (ahead >= 1 && ahead <= this.slideCount) this._ensurePage(ahead).catch(() => {});
 
     this._current = n;
+    // Clear any persisted animation state on the incoming canvas before it
+    // animates in, so it never starts from a stale opacity/transform fill.
+    this._resetCanvas(incoming);
     const transition = getTransition(opts.transition || 'cut');
-    await transition.run({ incoming, outgoing, container: this.stage, direction });
+    try {
+      await transition.run({
+        incoming,
+        outgoing: outgoing && outgoing !== incoming ? outgoing : null,
+        container: this.stage,
+        direction,
+      });
+    } catch { /* a cancelled/failed animation must not strand the slide */ }
+    if (token !== this._navToken) return;     // a newer nav owns the final state
+    this._commit(n);
+  }
+
+  // True when canvas `n` is the visible one (display set + not transparent).
+  _isShown(n) {
+    const c = this._canvases.get(n);
+    if (!c) return false;
+    return c.style.display !== 'none' && c.style.opacity !== '0';
+  }
+
+  // Cancel stray animations + clear inline opacity/transform on one canvas.
+  _resetCanvas(c) {
+    if (!c) return;
+    try { c.getAnimations().forEach((a) => a.cancel()); } catch {}
+    c.style.opacity = '';
+    c.style.transform = '';
+  }
+
+  // Authoritative end state: exactly canvas `n` visible and pristine, all other
+  // rendered canvases hidden and reset. Idempotent; safe to call repeatedly.
+  _commit(n) {
+    for (const [k, c] of this._canvases) {
+      this._resetCanvas(c);
+      c.style.display = (k === n) ? '' : 'none';
+    }
   }
 
   /**
