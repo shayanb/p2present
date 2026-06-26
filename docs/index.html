@@ -36,8 +36,19 @@
       />
       <button type="submit" class="p2-load">Load</button>
       <button type="button" class="p2-load p2-share" id="share-btn" title="Copy a shareable link to this presentation" aria-label="Copy a shareable link">🔗 Share</button>
+      <button type="button" class="p2-load p2-share" id="share-spot-btn" title="Copy a link that opens at the current time + slide" aria-label="Copy a link to the current spot">📍 This spot</button>
     </form>
   </header>
+
+  <nav class="p2-nav" aria-label="Demos and tools">
+    <span class="p2-nav-label">Demos:</span>
+    <a class="p2-nav-link" href="?p=demo" data-demo="demo">HTML deck</a>
+    <a class="p2-nav-link" href="?p=moav-pdf" data-demo="moav-pdf">PDF deck</a>
+    <span class="p2-nav-spacer"></span>
+    <a class="p2-nav-link" href="builder/">🛠 Builder</a>
+    <a class="p2-nav-link" href="host/">📤 Host assets</a>
+    <a class="p2-nav-link" href="https://github.com/ibeezhan/p2present#readme">Docs</a>
+  </nav>
 
   <p class="p2-status" id="status" role="status" aria-live="polite"></p>
 
@@ -46,7 +57,7 @@
   </main>
 
   <footer class="p2-footer">
-    <span>p2present — paste a remote presentation, or <a href="https://github.com/ibeezhan/p2present#fork--self-host">fork &amp; self-host your own</a>.</span>
+    <span>p2present — paste a remote presentation, build one in the <a href="builder/">Builder</a>, or <a href="https://github.com/ibeezhan/p2present#fork--self-host">fork &amp; self-host your own</a>.</span>
   </footer>
 
   <script type="module" src="src/main.js"></script>

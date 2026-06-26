@@ -26,6 +26,18 @@ const $title = document.getElementById('deck-title');
 const $header = document.querySelector('.p2-header');
 const $sourceToggle = document.getElementById('source-toggle');
 const $share = document.getElementById('share-btn');
+const $shareSpot = document.getElementById('share-spot-btn');
+
+/** Parse a deep-link hash like "#t=125&slide=7" → {t, slide} (or null). */
+function parseDeepLink() {
+  const h = window.location.hash.replace(/^#/, '');
+  if (!h) return null;
+  const q = new URLSearchParams(h);
+  const out = {};
+  if (q.has('t')) { const t = parseFloat(q.get('t')); if (Number.isFinite(t)) out.t = t; }
+  if (q.has('slide')) { const s = parseInt(q.get('slide'), 10); if (Number.isFinite(s)) out.slide = s; }
+  return (out.t != null || out.slide != null) ? out : null;
+}
 
 let player = null;
 let shareValue = '';   // the string a Share link should base64-encode
@@ -81,8 +93,11 @@ async function run({ source, share, display }) {
     $app.innerHTML = '';
     player = new Player(manifest, $app);
     await player.mount();
+    const deep = parseDeepLink();
+    if (deep) { try { player.applyDeepLink(deep); } catch (e) { console.warn(e); } }
     setStatus('');
     if ($share) $share.disabled = false;
+    if ($shareSpot) $shareSpot.disabled = false;
   } catch (err) {
     console.error(err);
     setStatus(err.message || String(err), true);
@@ -105,24 +120,29 @@ $form.addEventListener('submit', (e) => {
 });
 
 // Build a self-contained ?src=<base64> share link for the current presentation
-// and copy it to the clipboard.
-if ($share) {
-  $share.addEventListener('click', async () => {
-    if (!shareValue) return;
-    const url = new URL(window.location.href);
-    url.search = '';
-    url.searchParams.set('src', encodeBase64(shareValue));
-    const link = url.href;
-    try {
-      await navigator.clipboard.writeText(link);
-      setStatus('Share link copied to clipboard.');
-    } catch {
-      // Clipboard blocked (insecure context / permissions) — surface the link.
-      setStatus('Share link: ' + link);
-    }
-    history.replaceState(null, '', link);
-  });
+// and copy it to the clipboard. `withSpot` appends a #t=…&slide=… deep-link.
+async function copyShareLink(withSpot) {
+  if (!shareValue) return;
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('src', encodeBase64(shareValue));
+  if (withSpot && player) {
+    const { t, slide } = player.spot();
+    url.hash = `t=${t}&slide=${slide}`;
+  }
+  const link = url.href;
+  try {
+    await navigator.clipboard.writeText(link);
+    setStatus(withSpot ? 'Link to this spot copied to clipboard.' : 'Share link copied to clipboard.');
+  } catch {
+    // Clipboard blocked (insecure context / permissions) — surface the link.
+    setStatus('Share link: ' + link);
+  }
+  history.replaceState(null, '', link);
 }
+if ($share) $share.addEventListener('click', () => copyShareLink(false));
+if ($shareSpot) $shareSpot.addEventListener('click', () => copyShareLink(true));
 
 // Mobile: the source bar is collapsed by default behind a small disclosure
 // button so the player gets the vertical room. Tapping it reveals the form.
@@ -132,8 +152,19 @@ $sourceToggle.addEventListener('click', () => {
   if (open) $src.focus();
 });
 
+// Highlight the active demo in the nav (default boot === the html demo).
+(function markActiveDemo() {
+  const q = new URLSearchParams(window.location.search);
+  const hasOtherSource = q.has('src') || q.has('manifest');
+  const active = hasOtherSource ? null : (q.get('p') || 'demo');
+  document.querySelectorAll('.p2-nav-link[data-demo]').forEach((a) => {
+    a.classList.toggle('is-active', a.dataset.demo === active);
+  });
+})();
+
 // Boot.
 if ($share) $share.disabled = true;
+if ($shareSpot) $shareSpot.disabled = true;
 run(parseBootSource());
 
 function escapeHtml(s) {

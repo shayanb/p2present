@@ -8,18 +8,18 @@ Living checklist for the phase-3 overnight job. Status legend: ⬜ todo · 🔄 
 - ✅ Create + commit this checklist
 
 ## 3. PDF demo flow (done early — other parts target it)
-- ⬜ Add `content/moav-pdf/` manifest (deck.type "pdf", same youtube video + timing)
-- ⬜ Bundle the PDF asset
-- ⬜ Selectable via `?p=moav-pdf` + a demo picker on the resolver
-- ⬜ Verify PDF renders + syncs (pdf.js adapter) in headless smoke
+- ✅ Add `content/moav-pdf/` manifest (deck.type "pdf", same youtube video + timing)
+- ✅ Bundle the PDF asset
+- ✅ Selectable via `?p=moav-pdf` + a demo picker on the resolver
+- ✅ Verify PDF renders + syncs (pdf.js adapter) in headless smoke
 
 ## 4. Thumbnail scrubber + deep-links
-- ⬜ Deck adapters expose `thumbnail(slide)` (PDF: real rendered canvas; HTML: authored/label card)
-- ⬜ Scrubber hover/seek shows a slide preview thumbnail for that time (html + pdf)
-- ⬜ Deep-link hash `#t=<seconds>&slide=<n>` opens at that time/slide
-- ⬜ Hash updates (debounced) as the user navigates
-- ⬜ Share button offers a "link to current spot" variant
-- ⬜ Smoke: scrubber thumbnail appears, deep-link opens correct time/slide
+- ✅ Deck adapters expose `thumbnail(slide)` (PDF: real rendered canvas; HTML: authored/label card)
+- ✅ Scrubber hover/seek shows a slide preview thumbnail for that time (html + pdf)
+- ✅ Deep-link hash `#t=<seconds>&slide=<n>` opens at that time/slide
+- ✅ Hash updates (debounced) as the user navigates
+- ✅ Share button offers a "link to current spot" variant
+- ✅ Smoke: scrubber thumbnail appears, deep-link opens correct time/slide
 
 ## 1. Manifest builder / editor UI (new page `docs/builder/`)
 - ⬜ Form: title/meta, video.sources[] rows, deck (type + sources[]), timing rows, subtitles[], resolvers, layout

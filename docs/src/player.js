@@ -99,6 +99,7 @@ export class Player {
     this._initAutoHide(controls);
     this.applyLayout();
     this.sync.start();
+    this.startHashSync();
     return this;
   }
 
@@ -136,7 +137,7 @@ export class Player {
     this.btnPrev = button('‹', 'Previous slide (←)', () => this.sync.prevSlide());
     this.btnNext = button('›', 'Next slide (→)', () => this.sync.nextSlide());
 
-    // Scrubber (click / drag to seek).
+    // Scrubber (click / drag to seek) with a hover/seek thumbnail preview.
     this.scrub = el('input', 'p2-scrub');
     this.scrub.type = 'range';
     this.scrub.min = 0; this.scrub.max = 1000; this.scrub.value = 0;
@@ -144,7 +145,9 @@ export class Player {
     this.scrub.addEventListener('input', () => {
       const dur = this.video.getDuration() || 0;
       this.video.seek((this.scrub.value / 1000) * dur);
+      this._showPreviewAtFraction(this.scrub.value / 1000);   // keep preview while dragging
     });
+    this._buildScrubPreview(bar);
 
     this.timeLabel = el('span', 'p2-time'); this.timeLabel.textContent = '0:00 / 0:00';
     this.slideLabel = el('span', 'p2-slidecount'); this.slideLabel.textContent = '1 / 1';
@@ -252,6 +255,116 @@ export class Player {
     this._onDocClick = (e) => { if (!wrap.contains(e.target)) { menu.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false'); } };
     document.addEventListener('click', this._onDocClick);
     return wrap;
+  }
+
+  // --- scrubber thumbnail preview -----------------------------------------
+  // On hover/seek over the timeline, show a small card with the slide that maps
+  // to that video time: a thumbnail image (PDF: rendered page; HTML: authored
+  // thumbnail when present) plus "slide N · label · time". Works for any deck.
+
+  _buildScrubPreview(bar) {
+    bar.classList.add('p2-controls-has-preview');
+    const preview = el('div', 'p2-scrub-preview');
+    preview.setAttribute('aria-hidden', 'true');
+    const img = el('img', 'p2-preview-img');
+    img.alt = '';
+    const cap = el('div', 'p2-preview-cap');
+    preview.append(img, cap);
+    bar.appendChild(preview);
+    this._preview = preview;
+    this._previewImg = img;
+    this._previewCap = cap;
+    this._previewToken = 0;        // guards against out-of-order async thumbnails
+    this._previewThumbCache = new Map();
+
+    const onMove = (e) => {
+      const rect = this.scrub.getBoundingClientRect();
+      if (!rect.width) return;
+      const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      this._showPreviewAtFraction(frac, e.clientX);
+    };
+    this.scrub.addEventListener('pointermove', onMove);
+    this.scrub.addEventListener('pointerenter', onMove);
+    this.scrub.addEventListener('pointerleave', () => this._hidePreview());
+    this._previewCleanup = () => this._hidePreview();
+  }
+
+  async _showPreviewAtFraction(frac, clientX) {
+    if (!this._preview) return;
+    const dur = this.video.getDuration() || 0;
+    const time = frac * dur;
+    const slide = this.sync ? this.sync.slideAtTime(time) : 1;
+    const cue = this.sync?.cueAtTime?.(time);
+    const label = cue?.label ? ` · ${cue.label}` : '';
+    this._previewCap.textContent = `Slide ${slide}${label} · ${formatTime(time)}`;
+    this._positionPreview(frac, clientX);
+    this._preview.classList.add('is-visible');
+
+    // Thumbnail (async; may be null for HTML decks without authored images).
+    const token = ++this._previewToken;
+    let thumb = this._previewThumbCache.get(slide);
+    if (thumb === undefined) {
+      try { thumb = await this.deck.thumbnail?.(slide); } catch { thumb = null; }
+      this._previewThumbCache.set(slide, thumb || null);
+    }
+    if (token !== this._previewToken) return;   // pointer moved on; drop stale result
+    if (thumb && thumb.src) {
+      this._previewImg.src = thumb.src;
+      this._preview.classList.add('has-img');
+    } else {
+      this._previewImg.removeAttribute('src');
+      this._preview.classList.remove('has-img');
+    }
+  }
+
+  _positionPreview(frac, clientX) {
+    const bar = this.controlsBar || this._preview.parentElement;
+    const barRect = bar.getBoundingClientRect();
+    const scrubRect = this.scrub.getBoundingClientRect();
+    const x = clientX != null ? clientX : scrubRect.left + frac * scrubRect.width;
+    const w = this._preview.offsetWidth || 160;
+    let left = x - barRect.left - w / 2;
+    left = Math.max(6, Math.min(left, barRect.width - w - 6));
+    this._preview.style.left = `${left}px`;
+  }
+
+  _hidePreview() {
+    this._previewToken++;
+    this._preview?.classList.remove('is-visible');
+  }
+
+  // --- deep-links (#t=<seconds>&slide=<n>) ---------------------------------
+
+  /** Current playback spot, for "link to this spot" share + hash sync. */
+  spot() {
+    return {
+      t: Math.round(this.video.getTime() || 0),
+      slide: this.deck?.currentSlide || 1,
+    };
+  }
+
+  /** Apply a parsed deep-link {t?, slide?} once, after mount. */
+  applyDeepLink({ t, slide } = {}) {
+    if (Number.isFinite(t)) this.video.seek(t);
+    if (Number.isFinite(slide)) this.sync.gotoSlide(slide);
+    else if (Number.isFinite(t)) this.sync.gotoSlide(this.sync.slideAtTime(t));
+  }
+
+  /** Start reflecting the current spot into location.hash (debounced). */
+  startHashSync() {
+    let last = '';
+    this._hashTimer = setInterval(() => {
+      if (!this.video) return;
+      const { t, slide } = this.spot();
+      const hash = `t=${t}&slide=${slide}`;
+      if (hash === last) return;
+      last = hash;
+      try {
+        const url = new URL(window.location.href);
+        url.hash = hash;
+        window.history.replaceState(null, '', url);
+      } catch {}
+    }, 1500);
   }
 
   _renderState(s) {
@@ -596,6 +709,8 @@ export class Player {
   destroy() {
     this.sync?.stop();
     clearTimeout(this._controlsHideTimer);
+    clearInterval(this._hashTimer);
+    this._previewCleanup?.();
     this.root.classList.remove('is-maximized', 'p2-immersive', 'p2-controls-visible');
     document.body.classList.remove('p2-maximized');
     window.removeEventListener('keydown', this._onKey);

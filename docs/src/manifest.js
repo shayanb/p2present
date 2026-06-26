@@ -137,6 +137,9 @@ export function normaliseManifest(raw, baseUrl = window.location.href) {
   }
   const slideCount = Number.isFinite(Number(raw.deck.slideCount))
     ? Math.floor(Number(raw.deck.slideCount)) : undefined;
+  // Optional authored slide thumbnails: ["url", …] (indexed by slide) or
+  // [{slide, src}]. Resolve each src against the manifest's base URL.
+  const thumbnails = normaliseThumbnails(raw.deck.thumbnails, baseUrl, gateways);
 
   // --- timing cues (inline; external files already resolved in loadPresentation) ---
   const rawCues = Array.isArray(raw.timing) ? raw.timing : [];
@@ -156,7 +159,7 @@ export function normaliseManifest(raw, baseUrl = window.location.href) {
       description: str(raw.meta?.description),
     },
     video: { sources: videoSources, poster },
-    deck: { type: String(raw.deck.type), sources: deckSources, slideCount, ...stripKnownDeck(raw.deck) },
+    deck: { type: String(raw.deck.type), sources: deckSources, slideCount, thumbnails, ...stripKnownDeck(raw.deck) },
     sync,
     subtitles,
     resolvers,
@@ -252,9 +255,23 @@ function resolveSrc(src, baseUrl, gateways) {
   return src;
 }
 
+// Optional authored thumbnails → list with resolved srcs. Accepts a plain array
+// of URL strings (indexed by slide) or an array of {slide, src}. Returns
+// undefined when none/invalid so the deck adapter falls back to its own render.
+function normaliseThumbnails(thumbs, baseUrl, gateways) {
+  if (!Array.isArray(thumbs) || !thumbs.length) return undefined;
+  if (typeof thumbs[0] === 'string') {
+    return thumbs.map((u) => (typeof u === 'string' ? resolveSrc(u, baseUrl, gateways) : u));
+  }
+  const out = thumbs
+    .filter((t) => t && t.src != null && Number.isFinite(Number(t.slide)))
+    .map((t) => ({ slide: Math.floor(Number(t.slide)), src: resolveSrc(String(t.src), baseUrl, gateways) }));
+  return out.length ? out : undefined;
+}
+
 // Carry through any extra deck keys (adapter hints) without the known ones.
 function stripKnownDeck(deck) {
-  const { type, src, sources, slideCount, ...rest } = deck;
+  const { type, src, sources, slideCount, thumbnails, ...rest } = deck;
   return rest;
 }
 

@@ -24,7 +24,9 @@ export class PdfDeckAdapter extends BaseDeckAdapter {
     this.doc = await pdfjsLib.getDocument(this.src).promise;
     this._total = this.doc.numPages;
     this._canvases = new Map();
-    await this._ensurePage(1);
+    this._thumbs = new Map();
+    const first = await this._ensurePage(1);
+    first.style.display = '';     // reveal slide 1 (goTo(1) would early-return)
     this._current = 1;
     this.emit('ready');
   }
@@ -61,6 +63,32 @@ export class PdfDeckAdapter extends BaseDeckAdapter {
     this._current = n;
     const transition = getTransition(opts.transition || 'cut');
     await transition.run({ incoming, outgoing, container: this.stage, direction });
+  }
+
+  /**
+   * Rasterise a low-res preview of page `slide` (1-based) as a JPEG data URL,
+   * cached per page. Authored thumbnails (manifest `deck.thumbnails`) still win
+   * via the base class; this is the auto-generated fallback for PDF decks.
+   */
+  async thumbnail(slide) {
+    const authored = await super.thumbnail(slide);
+    if (authored) return authored;
+    if (!this.doc) return null;
+    const n = Math.min(this.slideCount, Math.max(1, Math.floor(slide)));
+    if (this._thumbs.has(n)) return this._thumbs.get(n);
+    try {
+      const page = await this.doc.getPage(n);
+      const viewport = page.getViewport({ scale: 0.35 });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(viewport.width));
+      canvas.height = Math.max(1, Math.round(viewport.height));
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      const out = { src: canvas.toDataURL('image/jpeg', 0.7) };
+      this._thumbs.set(n, out);
+      return out;
+    } catch {
+      return null;   // a failed render just means "no thumbnail" — never throws
+    }
   }
 
   destroy() {

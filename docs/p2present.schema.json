@@ -69,7 +69,14 @@
             "additionalProperties": true
           }
         },
-        "slideCount": { "type": "integer", "minimum": 1, "description": "Total slide count (used for the counter when the deck can't report it)." }
+        "slideCount": { "type": "integer", "minimum": 1, "description": "Total slide count (used for the counter when the deck can't report it)." },
+        "thumbnails": {
+          "description": "Optional authored slide thumbnails for the scrubber preview. Either an array of image URLs (indexed by slide, 1-based) or an array of {slide, src}. URLs resolve against the manifest URL if relative. PDF decks auto-render thumbnails when this is omitted; HTML decks fall back to a slide-label card.",
+          "oneOf": [
+            { "type": "array", "items": { "type": "string" } },
+            { "type": "array", "items": { "type": "object", "required": ["slide", "src"], "properties": { "slide": { "type": "integer", "minimum": 1 }, "src": { "type": "string" } }, "additionalProperties": true } }
+          ]
+        }
       },
       "additionalProperties": true
     },

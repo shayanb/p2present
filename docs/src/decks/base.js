@@ -35,6 +35,26 @@ export class BaseDeckAdapter {
   get slideCount() { return 0; }
   async load() {}
   async goTo() {}
+
+  /**
+   * A small preview for `slide` (1-based), used by the scrubber thumbnail.
+   * Returns `{ src }` (an image URL or data URL) or `null` when none is
+   * available. The base implementation serves *authored* thumbnails declared in
+   * the manifest (`deck.thumbnails`) — already resolved to URLs by the loader —
+   * which works for any deck type; adapters may override to render their own
+   * (e.g. the PDF adapter rasterises the page). See decks/index.js.
+   */
+  async thumbnail(slide) {
+    const t = this.manifest?.deck?.thumbnails;
+    if (Array.isArray(t) && t.length) {
+      const n = Math.max(1, Math.floor(slide));
+      const src = typeof t[0] === 'string'
+        ? t[n - 1]
+        : (t.find((x) => Number(x.slide) === n)?.src);
+      if (src) return { src };
+    }
+    return null;
+  }
   destroy() {
     this._handlers = Object.create(null);
     if (this._blobUrl) { try { URL.revokeObjectURL(this._blobUrl); } catch {} }
