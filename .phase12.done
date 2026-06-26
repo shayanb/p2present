@@ -1,0 +1,22 @@
+Phase 12 — Brand logo + favicons + watermark + scroll-orbit — DONE 2026-06-26
+
+1. Favicons + meta: brand/favicon.ico + icon PNGs + apple-touch-icon(180) +
+   web app manifest (site.webmanifest, 192+512, name "p2present", dark theme)
+   wired across home, /app, /docs, /host, /builder. OG/twitter image →
+   brand/logo.png. Replaced the old emoji/SVG placeholder favicons.
+2. Brand mark in UI: icon-32/48 PNG as the nav + footer brand mark on home,
+   app header, docs hub, host, builder (emoji glyphs dropped).
+3. Hero scroll-orbit: logo-hero-base.png (ring+panels, no dots) + two glowing
+   peer "planet" dots (cyan + magenta) on an inline SVG sharing the artwork's
+   1254×1254 space. Ellipse fitted from the ring (center 643.55,615.34 ·
+   semi-axes 338.40/567.26 · φ 62.20° · brightness hit-ratio 1.000) so the
+   dots sit exactly on the ring. Scroll drives the orbit (eased), faint idle
+   drift; reduced motion → static dots. mix-blend:screen drops the black bg.
+4. Watermark: brand/watermark-160.png as a subtle bottom-left mark in the
+   player stage, clear of controls / captions / PiP video, links home.
+
+Verify: units 45 (app) + 23 (service) pass; smoke 117/117 at 390/780/1280,
+0 same-origin console errors. Scroll-orbit confirmed (722px travel, on-ring
+residual 0.000) + reduced-motion static (0px). Static-only.
+
+Pushed to main: 6713ba9
