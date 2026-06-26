@@ -177,11 +177,31 @@ body {
 .p2-link { font-size: 16px; filter: grayscale(1) opacity(0.5); }
 .p2-link.is-linked { filter: none; border-color: var(--accent); }
 
-/* layout-mode switcher */
+/* layout-mode switcher + the grouped "Layout" view cluster */
+.p2-layout-group {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 6px 3px 8px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel-2);
+}
+.p2-group-label {
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--muted); white-space: nowrap; user-select: none;
+}
 .p2-modes { display: inline-flex; gap: 4px; }
-.p2-mode-btn { min-width: 36px; padding: 8px 10px; font-size: 15px; line-height: 1; }
+.p2-mode-btn { min-width: 38px; padding: 8px 10px; font-size: 16px; line-height: 1; }
 .p2-mode-btn.is-on { border-color: var(--accent); color: var(--accent); background: var(--panel); }
 .p2-btn.is-on { border-color: var(--accent); color: var(--accent); }
+
+/* resolver disclosure toggle (mobile only — desktop keeps the bar inline) */
+.p2-source-toggle {
+  display: none;
+  background: var(--panel-2); color: var(--fg);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 8px 12px; cursor: pointer; font-size: 14px; font-weight: 600;
+  align-items: center; gap: 6px; white-space: nowrap;
+}
+.p2-source-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
 /* CC menu */
 .p2-cc { position: relative; }
@@ -235,6 +255,13 @@ body {
   .p2-app { padding: 6px; }
   .p2-player { gap: 6px; }
   .p2-footer { display: none; }
+
+  /* The "Paste a manifest URL" bar eats vertical space — collapse it behind a
+     small disclosure button; tapping it reveals the form on its own row. */
+  .p2-source-toggle { display: inline-flex; }
+  .p2-header .p2-source { display: none; flex-basis: 100%; }
+  .p2-header.p2-source-open .p2-source { display: flex; }
+  .p2-header.p2-source-open .p2-source-toggle { border-color: var(--accent); color: var(--accent); }
 
   .p2-controls { flex-wrap: wrap; gap: 8px; }
   .p2-scrub { order: 10; flex-basis: 100%; }

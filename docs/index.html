@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f12" />
   <title>p2present — synced slides + talk video</title>
   <meta name="description" content="A forkable web app that plays presentation slides in sync with the talk video." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎞️</text></svg>" />
@@ -15,6 +16,15 @@
       <span class="p2-name">p2present</span>
       <span class="p2-deck-title" id="deck-title"></span>
     </div>
+    <button
+      type="button"
+      class="p2-source-toggle"
+      id="source-toggle"
+      aria-expanded="false"
+      aria-controls="source-form"
+      aria-label="Load a presentation from a URL"
+      title="Load a presentation from a URL"
+    >🔗 Load URL</button>
     <form class="p2-source" id="source-form">
       <input
         id="source-input"

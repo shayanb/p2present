@@ -18,6 +18,8 @@ const $form = document.getElementById('source-form');
 const $app = document.getElementById('app');
 const $status = document.getElementById('status');
 const $title = document.getElementById('deck-title');
+const $header = document.querySelector('.p2-header');
+const $sourceToggle = document.getElementById('source-toggle');
 
 let player = null;
 
@@ -65,7 +67,17 @@ $form.addEventListener('submit', (e) => {
   const url = new URL(window.location.href);
   if (val) url.searchParams.set('src', val); else url.searchParams.delete('src');
   history.replaceState(null, '', url);
+  $header.classList.remove('p2-source-open');   // collapse the bar after loading
+  $sourceToggle.setAttribute('aria-expanded', 'false');
   run(val);
+});
+
+// Mobile: the source bar is collapsed by default behind a small disclosure
+// button so the player gets the vertical room. Tapping it reveals the form.
+$sourceToggle.addEventListener('click', () => {
+  const open = $header.classList.toggle('p2-source-open');
+  $sourceToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) $src.focus();
 });
 
 // Boot: honour ?src= if present, else load the demo.

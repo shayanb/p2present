@@ -173,6 +173,7 @@ export class Player {
     for (const m of MODES) {
       const b = button(m.icon, m.label, () => this.setMode(m.id));
       b.classList.add('p2-mode-btn');
+      b.setAttribute('aria-label', m.label);   // icon-only: name it for AT + tooltip
       this.modeButtons[m.id] = b;
       modeGroup.appendChild(b);
     }
@@ -188,13 +189,24 @@ export class Player {
       this.btnFs.title = on ? 'Exit fullscreen (f)' : 'Fullscreen (f)';
     });
 
+    // Group the layout-mode switcher + fullscreen so they read as one "view"
+    // cluster, with a visible "Layout" caption (especially helpful on mobile,
+    // where the icon-only buttons are otherwise unrecognisable).
+    const layoutGroup = el('div', 'p2-layout-group');
+    layoutGroup.setAttribute('role', 'group');
+    layoutGroup.setAttribute('aria-label', 'Layout and view');
+    const layoutLabel = el('span', 'p2-group-label');
+    layoutLabel.textContent = 'Layout';
+    layoutLabel.setAttribute('aria-hidden', 'true');
+    layoutGroup.append(layoutLabel, modeGroup, this.btnFs);
+
     bar.append(
       this.btnPlay, this.btnPrev, this.btnNext,
       this.scrub, this.timeLabel,
       spacer(), this.slideLabel, this.speed,
     );
     if (ccWrap) bar.append(ccWrap);
-    bar.append(modeGroup, this.btnFs, this.btnLink);
+    bar.append(layoutGroup, this.btnLink);
 
     this._syncModeButtons();
   }
