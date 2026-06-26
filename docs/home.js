@@ -27,19 +27,19 @@ function initSmoothScroll() {
 /* ============================================================= *
  *  2. SCROLL-DRIVEN LAYOUT MORPH                                 *
  * ============================================================= */
+// Five scroll phases. The first four morph the layout; the fifth is the climax —
+// source nodes ignite and stream into the player (driven by the .sourcing class).
 const STEPS = [
-  { title: 'Split view',          // 0
-    note: 'slides and video, side by side' },
-  { title: 'Slides focus',        // 1
-    note: 'lean into the deck, video stays in view' },
-  { title: 'Video focus',         // 2
-    note: 'lean into the talk, slides shrink' },
-  { title: 'Picture-in-picture',  // 3
-    note: 'full slides, the speaker floating in a corner' },
+  { title: 'Split view' },          // 0
+  { title: 'Slides focus' },        // 1
+  { title: 'Video focus' },         // 2
+  { title: 'Picture-in-picture' },  // 3
+  { title: 'Plays from any source' },// 4 — the source constellation
 ];
 
 const morph    = document.querySelector('.morph');
 const showcase  = document.getElementById('showcase');
+const sticky    = document.querySelector('.showcase-sticky');
 const titleEl   = document.getElementById('morph-title');
 const capEls    = [...document.querySelectorAll('.morph-cap')];
 const dotEls     = [...document.querySelectorAll('#morph-dots i')];
@@ -63,6 +63,8 @@ function applyStep(step) {
   if (titleEl) titleEl.textContent = STEPS[step].title;
   capEls.forEach((c) => c.classList.toggle('active', Number(c.dataset.step) === step));
   dotEls.forEach((d, i) => d.classList.toggle('on', i === step));
+  // the final phase: ignite the source constellation streaming into the player
+  if (sticky) sticky.classList.toggle('sourcing', step >= 4);
 }
 
 function onScroll() {

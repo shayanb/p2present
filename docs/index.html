@@ -6,19 +6,19 @@
   <meta name="theme-color" content="#06070b" />
 
   <title>p2present — presentations that play themselves</title>
-  <meta name="description" content="p2present plays your slides in sync with the talk video — peer-to-peer, deep-linkable, and forkable. Open core, free forever." />
+  <meta name="description" content="Your slides and your talk, in perfect sync — scrub to any moment, together. A cinematic, link-anywhere presentation player. Open source, free forever." />
   <link rel="canonical" href="https://ibeezhan.github.io/p2present/" />
 
   <!-- Open Graph / Twitter -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="p2present" />
   <meta property="og:title" content="p2present — presentations that play themselves" />
-  <meta property="og:description" content="A cinematic player that scrubs your slides and the talk video together — peer-to-peer, deep-linkable, forkable. Open source, free forever." />
+  <meta property="og:description" content="Your slides and your talk, in perfect sync — scrub to any moment, together. Cinematic, link-anywhere, open source." />
   <meta property="og:url" content="https://ibeezhan.github.io/p2present/" />
   <meta property="og:image" content="https://ibeezhan.github.io/p2present/screenshots/demo-youtube-1280.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="p2present — presentations that play themselves" />
-  <meta name="twitter:description" content="Slides synced to the talk video, peer-to-peer and deep-linkable. Open source, free forever." />
+  <meta name="twitter:description" content="Your slides and your talk, in perfect sync — scrub to any moment, together. Open source, free forever." />
   <meta name="twitter:image" content="https://ibeezhan.github.io/p2present/screenshots/demo-youtube-1280.png" />
 
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎞️</text></svg>" />
@@ -29,7 +29,10 @@
     .reveal { opacity: 1 !important; transform: none !important; }
     #showcase { height: auto !important; }
     .showcase-sticky { position: relative !important; height: auto !important; padding: 40px 0 !important; }
-    .scroll-hint, .morph-dots { display: none !important; }
+    .scroll-cue, .morph-dots { display: none !important; }
+    /* the source constellation only fades in mid-scroll under JS — show it statically */
+    .sources-field { position: relative !important; opacity: 1 !important; margin-top: 36px; min-height: 220px; }
+    .sources-field .streams { display: none !important; }
   </style></noscript>
 
   <!-- Legacy / shared player links land here (?p=…, ?src=…, ?manifest=…, ?demo).
@@ -66,28 +69,38 @@
     <!-- ===================== HERO ===================== -->
     <section class="hero">
       <div class="wrap hero-inner">
-        <span class="eyebrow"><span class="dotpulse"></span>Peer-to-peer presentation player</span>
+        <span class="eyebrow"><span class="dotpulse"></span>Now playing</span>
         <h1>Presentations that<br />play themselves<span class="dot">.</span></h1>
-        <p class="tagline">Slides synced to the talk video — peer-to-peer, deep-linkable, alive.</p>
-        <p class="sub">Drop in your deck and a recording, write one small JSON file, and share a link.
-          The slides and the video scrub together — forward, backward, and straight to any moment.</p>
+        <p class="tagline">Your slides and your talk, in perfect sync — scrub to any moment, together.</p>
         <div class="actions">
           <a class="btn btn-primary" href="app/?p=moav-pdf" data-demo-cta>▶ Load a demo</a>
           <a class="btn btn-ghost" href="app/">Open the player</a>
         </div>
-        <p class="note">No accounts. No backend. A <b>static page</b> you can fork in a minute.</p>
-        <div class="scroll-hint"><span class="mouse"></span>Scroll to watch it morph</div>
+
+        <!-- near-wordless 3-beat: the whole flow in three words + motion -->
+        <div class="beats" aria-label="Bring, sync, share">
+          <span class="beat"><span class="bi">📥</span><b>Bring</b></span>
+          <span class="flow" aria-hidden="true"></span>
+          <span class="beat"><span class="bi">🎬</span><b>Sync</b></span>
+          <span class="flow" aria-hidden="true"></span>
+          <span class="beat"><span class="bi">🔗</span><b>Share</b></span>
+        </div>
+
+        <!-- tiny, glyph-only scroll cue — no sentence labels -->
+        <div class="scroll-cue" aria-hidden="true"><span class="mouse"></span></div>
       </div>
     </section>
 
     <!-- ============== SCROLL-MORPH SHOWCASE (centerpiece) ============== -->
-    <!-- A tall scroll track; the sticky stage pins a stylized mock of the
-         player that morphs through the four layout modes as you scroll.
-         The mock is hand-built CSS/SVG — NOT the real (heavy) player. -->
-    <section id="showcase" aria-label="Layout modes showcase">
+    <!-- One tall scroll track, one continuous journey. The sticky stage pins a
+         stylized player mock that morphs through the four layout modes, then —
+         as the climax — source nodes ignite around it and stream light into the
+         player (the "plays from any source" beat). Hand-built CSS/SVG, NOT the
+         real (heavy) player. -->
+    <section id="showcase" aria-label="One player, every layout, every source">
       <div class="showcase-sticky">
         <div class="showcase-head">
-          <div class="kicker">One player · four ways to watch</div>
+          <div class="kicker">One player</div>
           <h2 id="morph-title">Split view</h2>
         </div>
 
@@ -111,6 +124,28 @@
             </div>
             <div class="morph-bar"><span class="g">▶</span><div class="track"></div><span class="g">⛶</span></div>
           </div>
+
+          <!-- the climax: source nodes streaming into the player. Lives over the
+               sticky stage; fades in at the final scroll phase (.sourcing). -->
+          <div id="sources" class="sources-field" aria-label="Plays from any source">
+            <svg class="streams" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="streamGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#4fd1c5"/><stop offset=".5" stop-color="#7c6bff"/><stop offset="1" stop-color="#ff5cf0"/>
+                </linearGradient>
+              </defs>
+              <path d="M16,24 C34,34 40,44 50,50"/>
+              <path d="M84,24 C66,34 60,44 50,50"/>
+              <path d="M9,58 C28,56 38,52 50,50"/>
+              <path d="M91,58 C72,56 62,52 50,50"/>
+              <path d="M50,90 C50,74 50,62 50,50"/>
+            </svg>
+            <span class="src-node" data-src="youtube"   style="--x:16%;--y:24%"><span class="orb">▶</span><b>YouTube</b></span>
+            <span class="src-node" data-src="mp4"       style="--x:84%;--y:24%"><span class="orb">🎞️</span><b>MP4 / HTTP</b></span>
+            <span class="src-node" data-src="ipfs"      style="--x:9%;--y:58%"><span class="orb">🪐</span><b>IPFS</b></span>
+            <span class="src-node" data-src="webtorrent" style="--x:91%;--y:58%"><span class="orb">🌱</span><b>WebTorrent</b></span>
+            <span class="src-node" data-src="arweave"   style="--x:50%;--y:90%"><span class="orb">🜨</span><b>Arweave</b></span>
+          </div>
         </div>
 
         <div>
@@ -119,35 +154,17 @@
               <svg class="ico" viewBox="0 0 16 12"><rect x="1" y="1.5" width="6.2" height="9" rx="1"/><rect x="8.8" y="1.5" width="6.2" height="9" rx="1"/></svg>Split
             </span>
             <span class="morph-cap" data-step="1">
-              <svg class="ico" viewBox="0 0 16 12"><rect x="1" y="1.5" width="9.2" height="9" rx="1"/><rect x="11.6" y="1.5" width="3.4" height="9" rx="1"/></svg>Slides focus
+              <svg class="ico" viewBox="0 0 16 12"><rect x="1" y="1.5" width="9.2" height="9" rx="1"/><rect x="11.6" y="1.5" width="3.4" height="9" rx="1"/></svg>Slides
             </span>
             <span class="morph-cap" data-step="2">
-              <svg class="ico" viewBox="0 0 16 12"><rect x="1" y="1.5" width="3.4" height="9" rx="1"/><rect x="5.8" y="1.5" width="9.2" height="9" rx="1"/></svg>Video focus
+              <svg class="ico" viewBox="0 0 16 12"><rect x="1" y="1.5" width="3.4" height="9" rx="1"/><rect x="5.8" y="1.5" width="9.2" height="9" rx="1"/></svg>Video
             </span>
             <span class="morph-cap" data-step="3">
-              <svg class="ico" viewBox="0 0 16 12"><rect x="1" y="1.5" width="14" height="9" rx="1"/><rect class="f" x="9.3" y="6" width="4.7" height="3.6" rx="0.6"/></svg>Picture-in-picture
+              <svg class="ico" viewBox="0 0 16 12"><rect x="1" y="1.5" width="14" height="9" rx="1"/><rect class="f" x="9.3" y="6" width="4.7" height="3.6" rx="0.6"/></svg>PiP
             </span>
           </div>
-          <div class="morph-dots" id="morph-dots"><i class="on"></i><i></i><i></i><i></i></div>
+          <div class="morph-dots" id="morph-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
         </div>
-      </div>
-    </section>
-
-    <!-- ===================== ANY SOURCE ===================== -->
-    <section id="sources" class="alive">
-      <div class="wrap">
-        <div class="section-head reveal">
-          <div class="kicker">Bring your own everything</div>
-          <h2>Plays from <span class="neon-text">any source</span></h2>
-          <p>List your video once; the player picks the first one that loads. No re-encoding, no lock-in.</p>
-        </div>
-        <div class="sources">
-          <div class="source reveal" data-delay="0"><div class="ico">▶️</div><h3>YouTube</h3><p>Drop in a watch URL or ID — chapters and all.</p><span class="fb">★ default</span></div>
-          <div class="source reveal" data-delay="1"><div class="ico">🎞️</div><h3>MP4 / HLS</h3><p>A direct file or stream you host anywhere.</p><span class="fb">↺ fallback</span></div>
-          <div class="source reveal" data-delay="2"><div class="ico">🪐</div><h3>IPFS</h3><p>Content-addressed — <code>ipfs://</code> via a gateway.</p><span class="fb">↺ fallback</span></div>
-          <div class="source reveal" data-delay="3"><div class="ico">🌱</div><h3>WebTorrent</h3><p>Peer-to-peer in the browser — seed it yourself.</p><span class="fb">↺ fallback</span></div>
-        </div>
-        <p class="sources-note reveal">Same goes for decks: <b>HTML</b>, <b>PDF</b> via pdf.js, or an <b>embed</b> like Google Slides.</p>
       </div>
     </section>
 
@@ -156,17 +173,16 @@
       <div class="wrap">
         <div class="alive-grid">
           <div class="reveal">
-            <div class="kicker" style="color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase">Persistence · roadmap</div>
+            <div class="kicker" style="color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase">Permanence</div>
             <h2>Your talk, <span class="neon-text">kept alive</span></h2>
-            <p class="lead">The player and the format are free forever. The optional paid pieces exist for one
-              reason — keeping a talk online without your laptop seeding it, and letting people trust a link is who it claims to be.</p>
+            <p class="lead">Long after the laptop's closed — still online, still scrubbing.</p>
             <div class="roadmap-pills">
-              <span class="pill"><span class="t">Coming</span> Manifest hosting</span>
+              <span class="pill"><span class="t">Coming</span> Hosting</span>
               <span class="pill"><span class="t">Coming</span> Pay-once persistence</span>
               <span class="pill"><span class="t">Roadmap</span> Verified registry</span>
             </div>
             <div class="more">
-              <a class="btn btn-ghost" href="https://github.com/ibeezhan/p2present/blob/main/ROADMAP.md" rel="noopener">🗺 Read the roadmap</a>
+              <a class="btn btn-ghost" href="https://github.com/ibeezhan/p2present/blob/main/ROADMAP.md" rel="noopener">🗺 The roadmap</a>
             </div>
           </div>
           <div class="alive-visual reveal" data-delay="1" aria-hidden="true">
@@ -183,9 +199,7 @@
         <div class="reveal">
           <div class="kicker" style="color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase">Open source</div>
           <h2>Fork it. Host it. <span class="neon-text">Keep it.</span></h2>
-          <p>p2present is a tiny, dependency-light <strong>static</strong> site under the <strong>MIT</strong> license.
-            No server runtime to pay for, nothing to lock you in — clone the repo, drop your content into
-            <code>docs/content/</code>, enable GitHub Pages, and you have your own instance on your own domain.</p>
+          <p>MIT, static, yours. No server, no lock-in.</p>
           <div class="pills">
             <a href="https://github.com/ibeezhan/p2present" rel="noopener">★ Repo</a>
             <a href="builder/">🛠 Builder</a>
@@ -194,11 +208,15 @@
             <a href="https://github.com/ibeezhan/p2present/blob/main/ROADMAP.md" rel="noopener">🗺 Roadmap</a>
           </div>
         </div>
-        <div class="code reveal" data-delay="1"><span class="c"># fork &amp; self-host in a minute</span>
-git clone https://github.com/ibeezhan/p2present
-<span class="c"># add docs/content/&lt;your-talk&gt;/manifest.json</span>
-npm run <span class="k">smoke</span>   <span class="c"># headless checks + screenshots</span>
-<span class="c"># enable GitHub Pages from /docs — done.</span></div>
+        <!-- an animated "forks radiating from one root" glyph — graphics over a code block -->
+        <div class="fork-viz reveal" data-delay="1" aria-hidden="true">
+          <span class="root"></span>
+          <span class="spark" style="--a:-46deg"></span>
+          <span class="spark" style="--a:-18deg"></span>
+          <span class="spark" style="--a:14deg"></span>
+          <span class="spark" style="--a:42deg"></span>
+          <span class="node n1"></span><span class="node n2"></span><span class="node n3"></span><span class="node n4"></span>
+        </div>
       </div>
     </section>
 
@@ -207,7 +225,6 @@ npm run <span class="k">smoke</span>   <span class="c"># headless checks + scree
       <div class="wrap">
         <div class="halo reveal">
           <h2>See it <span class="neon-text">play itself</span>.</h2>
-          <p class="muted">The "Mother of All VPNs" talk — 23 slides synced to the recording.</p>
           <div class="actions">
             <a class="btn btn-primary" href="app/?p=moav-pdf" data-demo-cta>▶ Load a demo</a>
             <a class="btn btn-ghost" href="builder/">🛠 Build your own</a>
