@@ -55,6 +55,10 @@ Captured with the headless-Chrome smoke harness (`npm run smoke`).
 
 ![PDF deck demo with a scrubber thumbnail preview](docs/screenshots/pdf-demo.png)
 
+**Signed manifest — the player verifies on load and badges the signer** (`✓ signed by 0x…`, or an ENS name when one resolves):
+
+![Header showing a verified author-signature badge](docs/screenshots/signed-badge.png)
+
 **Tools — the [Builder](https://ibeezhan.github.io/p2present/builder/) and [Host helper](https://ibeezhan.github.io/p2present/host/):**
 
 | Builder (live JSON + validation) | Host (IPFS pin / WebTorrent seed) |
@@ -85,6 +89,7 @@ Captured with the headless-Chrome smoke harness (`npm run smoke`).
 - **Pluggable deck adapters** — `html` (reveal.js-style / `<deck-stage>` web components, in an iframe), `pdf` (rendered with pdf.js), and `embed` (an external slide URL — Google Slides / SpeakerDeck / Canva — in an iframe). Add more behind one interface.
 - **Pluggable video providers** with **source fallback** — `youtube` (IFrame API), `mp4` (HTML5 `<video>`), **`webtorrent`** (stream a magnet into `<video>` via `file.renderTo`), and **`ipfs`** (play a CID through gateway fallback). List several sources and the player uses the first that loads, gracefully falling through when a p2p source can't be reached. See [Decentralized sources](#decentralized-sources-p2p).
 - **Decentralized loading & sharing** — load a whole presentation from `https` / `ipfs://` / `magnet:`, deep-link with `?manifest=` / `?p=`, or pack a self-contained `?src=<base64>` link with the **🔗 Share** button. See [Loading & sharing](#loading--sharing).
+- **Signed manifests** — optionally **sign** a `p2present.json` with an Ethereum wallet / key (**EIP-191** `personal_sign`) or a raw **Ed25519** keypair in the Builder; the player verifies it on load and shows a **“✓ signed by `<ENS / domain / 0x…>`”** badge (Ethereum addresses reverse-resolve to **ENS**). The signature covers the whole manifest, so any edit invalidates it — and it **never blocks playback**. Dependency-free crypto (`docs/src/crypto/`). See [SPEC → sig](SPEC.md#sig) · [AUTHORING → Sign it](AUTHORING.md#step-5--sign-it-optional).
 - **Thumbnail scrubber + deep-links** — hovering/seeking the timeline shows a **slide preview** for that moment (PDF pages are rendered live; HTML decks use authored thumbnails or a slide-label card). Open the player at an exact spot with `#t=<seconds>&slide=<n>`; the hash tracks where you are, and the **🔗 Share** menu's "copy link to this moment" copies a link to the current spot. See [Loading & sharing](#loading--sharing).
 - **Visual manifest builder** — the **[Builder](https://ibeezhan.github.io/p2present/builder/)** assembles a `p2present.json` from a form (video sources, deck, timing, subtitles, resolvers, layout) with a live JSON preview, **schema validation**, download / copy / open-in-player, load-existing, and a **timing-capture** helper that stamps the playing video's time against the current slide.
 - **In-browser asset hosting** — the **[Host helper](https://ibeezhan.github.io/p2present/host/)** pins a file to **IPFS** (via your own Pinata / web3.storage token, stored only in your browser) or creates + seeds a **WebTorrent** in the tab, handing the resulting `ipfs://` / `magnet:` reference to the Builder. See [HOSTING.md](HOSTING.md).
@@ -153,7 +158,8 @@ A presentation is one `manifest.json`. The current **`p2present.json` v1.0** sch
   ],
   "subtitles": [ { "lang": "en", "label": "English", "src": "subs/en.vtt", "default": true } ],
   "resolvers": { "ipfsGateways": ["https://{cid}.ipfs.dweb.link"], "webtorrentTrackers": ["wss://tracker.openwebtorrent.com"] },
-  "layout": { "split": 0.6, "mode": "split", "transition": "fade" }
+  "layout": { "split": 0.6, "mode": "split", "transition": "fade" },
+  "sig": { "alg": "eip191", "signer": { "address": "0x…" }, "signature": "0x…", "canon": "p2/jcs-1" }  // optional — see SPEC → sig
 }
 ```
 
@@ -165,6 +171,7 @@ Highlights (see **[SPEC.md](SPEC.md)** for every field):
 - **`subtitles`** — `.vtt` / `.srt` caption tracks (see [Subtitles](#subtitles)).
 - **`resolvers`** — override IPFS gateways / WebTorrent trackers used by the `ipfs` / `webtorrent` providers, P2P decks, and `ipfs://` asset resolution.
 - **`layout`** — default split ratio, mode, and caption placement (see [Layout controls](#layout-controls) / [Subtitles](#subtitles)).
+- **`sig`** *(optional)* — an author signature (`eip191` Ethereum / `ed25519`). Verified on load → a **“✓ signed by …”** badge; never blocks playback. Sign it in the Builder. See [SPEC → sig](SPEC.md#sig).
 - Relative `src` values (deck, mp4, subtitles, poster, external timing) resolve against the **manifest's own URL**; `ipfs://` and `magnet:` srcs resolve over their respective transports.
 
 ---
@@ -371,6 +378,10 @@ The engine derives the active slide purely from `slideAtTime(videoTime)`. When t
 
 - ✅ **Sharing service (pastebin-lite)** — a self-deployable [Cloudflare Worker + KV](SERVICE.md) that hosts manifests behind short `…/p/<id>` links: **💾 Save & share** in the player, `?p=<id>` loading, edit tokens (hashed server-side), expiry, public/unlisted, size cap + rate limit + report endpoint, and an optional IPFS mirror on save.
 
+**Phase 8 — shipped:**
+
+- ✅ **Signed manifests** — sign a `p2present.json` with an Ethereum wallet / key (**EIP-191**) or a raw **Ed25519** keypair in the Builder; the player verifies on load and badges the signer (**ENS** reverse-resolved for Ethereum), never blocking playback. Dependency-free crypto in `docs/src/crypto/` + `docs/src/sign.js`; scheme in [SPEC → sig](SPEC.md#sig).
+
 **Next up:**
 
 - Optional in-page Helia (gateway-free IPFS) when the runtime is feasible.
@@ -401,6 +412,8 @@ docs/                     # ← GitHub Pages root (served as-is, no build)
     manifest.js  time.js  # load/validate (p2present.json v1); HH:MM:SS parser
     resolve.js            # https/ipfs/magnet transports + base64 + WebTorrent client
     schema-validate.js    # tiny dependency-free JSON-Schema validator (Builder)
+    sign.js               # manifest signing/verify: canonical JSON + EIP-191 + Ed25519 + ENS describe
+    crypto/  { keccak, secp256k1, base64url, ens }   # dependency-free signing primitives
     registry.js           # generic plugin registry
     decks/   { base, index, html-deck, pdf-deck, embed-deck }   # adapters expose thumbnail()
     video/   { base, index, youtube, mp4, webtorrent, ipfs }

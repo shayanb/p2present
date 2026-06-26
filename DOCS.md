@@ -30,6 +30,7 @@ presentation slides in sync with the talk video — see the
 - **Make a presentation** → [AUTHORING.md](AUTHORING.md)
 - **Get assets onto IPFS / WebTorrent** → [HOSTING.md](HOSTING.md) · [Host helper](https://ibeezhan.github.io/p2present/host/)
 - **Save & share a manifest behind a short link** → [SERVICE.md](SERVICE.md)
+- **Sign a manifest (✓ signed by …)** → [AUTHORING → Sign it](AUTHORING.md#step-5--sign-it-optional) · [SPEC → sig](SPEC.md#sig)
 - **Look up a manifest field** → [SPEC.md](SPEC.md)
 - **Validate a manifest** → [SPEC → Validation](SPEC.md#validation)
 - **Deep-link to a moment** → [SPEC → Deep-links](SPEC.md#deep-links-tslide)

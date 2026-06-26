@@ -152,6 +152,35 @@ are — perfect for "watch from here". See
 
 ---
 
+## Step 5 — Sign it (optional)
+
+Signing proves *you* published a manifest. The player verifies the signature on
+load and shows a **“✓ signed by …”** badge in the header (a subtle “unsigned”
+pill otherwise) — it **never blocks playback**, it's just provenance.
+
+In the **Builder**, open the **🔏 Sign** card and pick one:
+
+- **🦊 Connect wallet & sign** — uses your injected wallet (MetaMask etc.) to
+  `personal_sign`. The badge shows your address, reverse-resolved to your **ENS
+  name** if you have one (e.g. `✓ signed by alice.eth`).
+- **Paste an Ethereum private key** — same EIP-191 scheme, no wallet needed. The
+  key is used locally and never leaves your browser.
+- **Generate an Ed25519 key** — a raw keypair (no blockchain). Add an optional
+  **domain** label. Save the printed private key if you want to re-sign later.
+
+The signature covers the **whole manifest**, so if you edit anything afterwards
+the Builder flags it **“⚠ edited since signing — re-sign”** and you just sign
+again. Then **Download** / **Copy JSON** / **Open in player** as usual — the
+`sig` block travels with the manifest (and through `?src=` share links). Full
+scheme: [SPEC → sig](SPEC.md#sig).
+
+> **What the badge means.** ✓ = the signature verifies against the manifest's
+> exact bytes and the claimed signer. For Ethereum the address is recovered from
+> the signature itself, so it can't be faked; ENS is shown for readability. It
+> proves authorship/integrity — it does **not** vouch that the content is true.
+
+---
+
 ## Checklist
 
 - [ ] Slides exist as an HTML folder or a PDF
@@ -160,6 +189,7 @@ are — perfect for "watch from here". See
 - [ ] `timing[]` covers each slide boundary, sorted by time
 - [ ] Manifest shows **✓ valid** in the Builder
 - [ ] (optional) subtitles + thumbnails added
+- [ ] (optional) **signed** in the Builder → header shows **✓ signed by …**
 - [ ] Published under `?p=…` (fork) or shared as a `?src=…` link
 
 Stuck on where to put assets? → [HOSTING.md](HOSTING.md). Need a field reference?
