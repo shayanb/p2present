@@ -61,6 +61,7 @@ link. See [Source transports](#source-transports) and
 | `subtitles`  | array            |    no    | Caption tracks — see [subtitles](#subtitles). |
 | `resolvers`  | object           |    no    | Phase-2 network overrides — see [resolvers](#resolvers). |
 | `layout`     | object           |    no    | Default layout — see [layout](#layout). |
+| `sig`        | object           |    no    | Author signature — see [sig](#sig). Verified on load; never blocks playback. |
 
 > **Path resolution.** Every relative `src` (deck, mp4 video, subtitles, poster,
 > external timing file) is resolved against the **manifest's own URL**, so a
@@ -290,6 +291,53 @@ PiP) and a tooltip:
 A fifth **Fullscreen** glyph (corner-bracket frame, label "Full") sits in the
 same cluster. Switch modes from the switcher or with the keyboard (`m` cycles);
 fullscreen is that button or the `f` key.
+
+### sig
+
+An **optional** author signature. It proves *who published* a manifest: the
+player verifies it on load and shows a **"✓ signed by …"** badge when valid (a
+subtle "unsigned" pill otherwise) — but it **never blocks playback**. A manifest
+without `sig` is fully valid; add or remove the block freely.
+
+```json
+"sig": {
+  "alg": "eip191",
+  "signer": { "address": "0x2c7536E3605D9C16a7a3D7b1898e529396a65c23" },
+  "signature": "0x…65 bytes…",
+  "canon": "p2/jcs-1"
+}
+```
+
+| Field       | Type   | Notes |
+|-------------|--------|-------|
+| `alg`       | string | `eip191` (Ethereum wallet / raw secp256k1 key) \| `ed25519` (raw keypair). |
+| `signer`    | object | `eip191` → `{ address }`. `ed25519` → `{ key, domain? }` where `key` is the 32-byte raw public key, base64url. |
+| `signature` | string | `eip191`: `0x` + r(32) + s(32) + v(1) hex (65 bytes). `ed25519`: base64url of the 64-byte signature. |
+| `canon`     | string | Canonicalization id — use `p2/jcs-1`. |
+
+**What is signed.** The signed payload is the **canonical JSON of the whole
+manifest** — including this block's `alg`, `signer`, and `canon`, but with
+`signature` removed. Canonical JSON (`p2/jcs-1`) recursively **sorts object keys**
+and uses minimal separators over UTF-8 (a JCS-lite form). Because the `signer`
+claim is itself inside the signed bytes, editing the manifest *or* the claimed
+signer breaks verification.
+
+- **`eip191`** — the message is the canonical string, hashed with the EIP-191
+  `personal_sign` prefix (`"\x19Ethereum Signed Message:\n" + len + msg`) and
+  signed by an Ethereum key. On load the player **recovers the address** from the
+  signature; the manifest is valid only if it equals `signer.address`. The address
+  is therefore self-authenticating, and the player **reverse-resolves it to an ENS
+  name** for the badge (read-only public RPC, forward-confirmed, graceful
+  fallback to `0x1234…abcd`).
+- **`ed25519`** — the canonical string is signed with a raw Ed25519 key
+  (WebCrypto). The 32-byte public key lives in `signer.key`; the signature
+  verifies against it. An optional `signer.domain` is a display label bound into
+  the signature.
+
+Sign in the **[Builder](builder/)** (connect a wallet, paste an Ethereum private
+key, or generate an Ed25519 key) — see [AUTHORING.md](AUTHORING.md). The
+implementation is dependency-free and runs identically in the browser and Node
+(`docs/src/sign.js`, `docs/src/crypto/`).
 
 ---
 

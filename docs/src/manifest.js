@@ -164,6 +164,10 @@ export function normaliseManifest(raw, baseUrl = window.location.href) {
     subtitles,
     resolvers,
     layout: normaliseLayout(raw.layout),
+    // Optional author signature (Phase 8) — passed through verbatim. The player
+    // verifies it against `_raw` (the canonical bytes are the AUTHORED manifest,
+    // pre-normalisation) and shows a badge; see src/sign.js + src/player.js.
+    sig: (raw.sig && typeof raw.sig === 'object') ? raw.sig : undefined,
     baseUrl,
     _raw: raw,
   };

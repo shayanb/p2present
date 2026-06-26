@@ -139,6 +139,28 @@
       },
       "additionalProperties": true
     },
+    "sig": {
+      "type": "object",
+      "description": "Optional author signature (Phase 8). Proves who published the manifest; the player verifies it on load and shows a \"✓ signed by …\" badge but NEVER blocks playback. Signed payload = the canonical JSON of the whole manifest including this block's `alg`/`signer`/`canon` but excluding `signature` — so editing the manifest OR the claimed signer invalidates the signature. Add or remove this block freely; an unsigned manifest is fully valid.",
+      "required": ["alg", "signer", "signature"],
+      "properties": {
+        "alg": { "type": "string", "enum": ["eip191", "ed25519"], "description": "\"eip191\" = Ethereum wallet / raw secp256k1 key via the EIP-191 personal_sign prefix (signer is the recovered address — self-authenticating). \"ed25519\" = a raw Ed25519 keypair (the public key is stored in `signer.key`)." },
+        "signer": {
+          "type": "object",
+          "description": "Who signed. eip191 → { address }. ed25519 → { key, domain? }.",
+          "properties": {
+            "address": { "type": "string", "description": "eip191: the signer's 0x Ethereum address (re-derived from the signature on verify; the stored value is for display + binding)." },
+            "key": { "type": "string", "description": "ed25519: the 32-byte raw public key, base64url (no padding)." },
+            "domain": { "type": "string", "description": "ed25519: optional human label (e.g. a domain) bound into the signature." },
+            "ens": { "type": "string", "description": "Optional cached ENS name for display; the player reverse-resolves live and does not trust this." }
+          },
+          "additionalProperties": true
+        },
+        "signature": { "type": "string", "description": "eip191: 0x + r(32) + s(32) + v(1) hex (65 bytes). ed25519: base64url of the 64-byte signature." },
+        "canon": { "type": "string", "description": "Canonicalization id. Use \"p2/jcs-1\" (recursively sorted keys, minimal separators, UTF-8)." }
+      },
+      "additionalProperties": true
+    },
     "layout": {
       "type": "object",
       "description": "Default layout. The user's interactive changes are persisted in localStorage and override these.",
