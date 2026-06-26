@@ -72,6 +72,10 @@ export class Player {
     // Subtle brand watermark in the stage corner — opaque mark, links home, and
     // tucked clear of the controls bar and centered captions.
     stage.appendChild(brandWatermark());
+    // Center brand "start" overlay — the large play affordance shown before the
+    // talk begins (hidden via .p2-started once playback starts).
+    this.startOverlay = buildStartOverlay(() => this._start());
+    stage.appendChild(this.startOverlay);
     this.stage = stage;
     this.deckPane = deckPane;
     this.videoPane = videoPane;
@@ -112,6 +116,7 @@ export class Player {
       onState: (s) => this._renderState(s),
     });
 
+    this._wireStartOverlay();
     this._buildControls(controls);
     this._bindInput();
     this._initDivider();
@@ -192,17 +197,9 @@ export class Player {
     });
     this.btnLink.classList.add('p2-link', 'is-linked');
 
-    // Layout-mode switcher (segmented).
-    const modeGroup = el('div', 'p2-modes');
-    modeGroup.setAttribute('role', 'group');
-    modeGroup.setAttribute('aria-label', 'Layout mode');
-    this.modeButtons = {};
-    for (const m of MODES) {
-      const b = iconButton(svgIcon(m.icon), m.short, m.label, () => this.setMode(m.id));
-      b.classList.add('p2-mode-btn');
-      this.modeButtons[m.id] = b;
-      modeGroup.appendChild(b);
-    }
+    // Layout-mode switcher — a single button showing the current layout that
+    // unfolds to reveal all four modes (see _buildLayoutFold).
+    const layoutFold = this._buildLayoutFold();
 
     // CC (subtitles) menu — only when tracks exist.
     const ccWrap = this._buildCcMenu();
@@ -216,16 +213,12 @@ export class Player {
       if (this.mode === 'overlap') this._applyPipGeometry();
     });
 
-    // Group the layout-mode switcher + fullscreen so they read as one "view"
-    // cluster, with a visible "Layout" caption (especially helpful on mobile,
-    // where the icon-only buttons are otherwise unrecognisable).
+    // Group the layout fold + fullscreen so they read as one "view" cluster.
+    // The fold's own button already labels the current layout, so no extra caption.
     const layoutGroup = el('div', 'p2-layout-group');
     layoutGroup.setAttribute('role', 'group');
     layoutGroup.setAttribute('aria-label', 'Layout and view');
-    const layoutLabel = el('span', 'p2-group-label');
-    layoutLabel.textContent = 'Layout';
-    layoutLabel.setAttribute('aria-hidden', 'true');
-    layoutGroup.append(layoutLabel, modeGroup, this.btnFs);
+    layoutGroup.append(layoutFold, this.btnFs);
 
     bar.append(
       this.btnPlay, this.btnPrev, this.btnNext,
@@ -236,6 +229,80 @@ export class Player {
     bar.append(layoutGroup, this.btnLink);
 
     this._syncModeButtons();
+  }
+
+  // --- layout fold ---------------------------------------------------------
+  // One trigger button shows the CURRENT layout's icon; on click / hover it
+  // unfolds (animated) into the four mode options. Picking one collapses it and
+  // updates the trigger. Fully keyboard + screen-reader accessible (a radio menu).
+  _buildLayoutFold() {
+    const wrap = el('div', 'p2-fold');
+    const trigger = el('button', 'p2-btn p2-icon-btn p2-fold-trigger');
+    trigger.type = 'button';
+    trigger.setAttribute('aria-haspopup', 'true');
+    trigger.setAttribute('aria-expanded', 'false');
+    this._foldIco = el('span', 'p2-fold-ico');
+    this._foldLbl = el('span', 'p2-btn-label');
+    trigger.append(this._foldIco, this._foldLbl);
+    this._foldTrigger = trigger;
+
+    const panel = el('div', 'p2-fold-panel');
+    panel.setAttribute('role', 'menu');
+    panel.setAttribute('aria-label', 'Choose a layout');
+    this.modeButtons = {};
+    for (const m of MODES) {
+      const b = iconButton(svgIcon(m.icon), m.short, m.label, () => { this.setMode(m.id); this._closeFold(true); });
+      b.classList.add('p2-mode-btn', 'p2-fold-item');
+      b.setAttribute('role', 'menuitemradio');
+      b.tabIndex = -1;
+      this.modeButtons[m.id] = b;
+      panel.appendChild(b);
+    }
+    wrap.append(trigger, panel);
+    this._foldWrap = wrap;
+    this._foldPanel = panel;
+
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      wrap.classList.contains('is-open') ? this._closeFold() : this._openFold();
+    });
+    // Hover-to-open on a fine pointer (mouse); touch uses the click toggle.
+    wrap.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') this._openFold(); });
+    wrap.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') this._closeFold(); });
+    // Keyboard: open from the trigger and move focus into the options; arrow-cycle
+    // within the panel; Escape collapses back to the trigger.
+    trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault(); this._openFold(); this.modeButtons[this.mode]?.focus();
+      } else if (e.key === 'Escape') { this._closeFold(); }
+    });
+    panel.addEventListener('keydown', (e) => {
+      const items = MODES.map((m) => this.modeButtons[m.id]);
+      const i = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+      else if (e.key === 'Home') { e.preventDefault(); items[0].focus(); }
+      else if (e.key === 'End') { e.preventDefault(); items[items.length - 1].focus(); }
+      else if (e.key === 'Escape') { e.preventDefault(); this._closeFold(true); }
+    });
+    // Close when focus leaves the whole fold (keyboard tab-away) or on outside click.
+    wrap.addEventListener('focusout', (e) => { if (!wrap.contains(e.relatedTarget)) this._closeFold(); });
+    this._onFoldDocClick = (e) => { if (!wrap.contains(e.target)) this._closeFold(); };
+    document.addEventListener('click', this._onFoldDocClick);
+    return wrap;
+  }
+
+  _openFold() {
+    if (!this._foldWrap || this._foldWrap.classList.contains('is-open')) return;
+    this._foldWrap.classList.add('is-open');
+    this._foldTrigger.setAttribute('aria-expanded', 'true');
+  }
+
+  _closeFold(focusTrigger) {
+    if (!this._foldWrap) return;
+    this._foldWrap.classList.remove('is-open');
+    this._foldTrigger.setAttribute('aria-expanded', 'false');
+    if (focusTrigger) this._foldTrigger.focus();
   }
 
   _buildCcMenu() {
@@ -427,6 +494,28 @@ export class Player {
     if (this.video.isPlaying()) this.video.pause(); else this.video.play();
   }
 
+  // --- center "start" overlay -----------------------------------------------
+  // The brand play mark sits over the stage until the talk begins. It hides the
+  // moment playback starts (from the overlay, the play button, or the keyboard)
+  // and reappears on a full reset (the video ending).
+
+  _wireStartOverlay() {
+    this._started = false;
+    this.video.on('play', () => this._setStarted(true));
+    this.video.on('ended', () => this._setStarted(false));
+  }
+
+  /** Begin the presentation from the center overlay: play + start the sync. */
+  _start() {
+    this._setStarted(true);
+    this.video.play();
+  }
+
+  _setStarted(on) {
+    this._started = !!on;
+    this.root.classList.toggle('p2-started', this._started);
+  }
+
   // --- layout: modes, divider, PiP, fullscreen -----------------------------
 
   setMode(mode) {
@@ -441,7 +530,15 @@ export class Player {
     if (!this.modeButtons) return;
     for (const m of MODES) {
       this.modeButtons[m.id]?.classList.toggle('is-on', m.id === this.mode);
-      this.modeButtons[m.id]?.setAttribute('aria-pressed', String(m.id === this.mode));
+      this.modeButtons[m.id]?.setAttribute('aria-checked', String(m.id === this.mode));
+    }
+    // Reflect the active layout on the fold's trigger button.
+    const cur = MODES.find((m) => m.id === this.mode) || MODES[0];
+    if (this._foldIco) { this._foldIco.replaceChildren(svgIcon(cur.icon)); }
+    if (this._foldLbl) { this._foldLbl.textContent = cur.short; }
+    if (this._foldTrigger) {
+      this._foldTrigger.title = `Layout: ${cur.short} — choose layout`;
+      this._foldTrigger.setAttribute('aria-label', `Layout: ${cur.label}. Choose layout`);
     }
   }
 
@@ -758,6 +855,7 @@ export class Player {
     window.removeEventListener('resize', this._onResize);
     document.removeEventListener('fullscreenchange', this._onFsChange);
     document.removeEventListener('click', this._onDocClick);
+    document.removeEventListener('click', this._onFoldDocClick);
     this._dividerCleanup?.();
     this.subs?.destroy();
     this.video?.destroy();
@@ -784,6 +882,28 @@ function brandWatermark() {
   img.width = 88; img.height = 63; img.draggable = false; img.loading = 'lazy';
   a.appendChild(img);
   return a;
+}
+// The center "start" affordance — a brand-styled play mark (the logo's neon
+// gradient play triangle inside its rounded video frame). Pure markup; the
+// gradient id is scoped with a constant since only one player mounts at a time.
+const START_MARK_SVG =
+  '<svg class="p2-start-ico" viewBox="0 0 120 120" aria-hidden="true" focusable="false">' +
+    '<defs><linearGradient id="p2StartGrad" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#4fd1c5"/><stop offset=".52" stop-color="#7c6bff"/><stop offset="1" stop-color="#ff5cf0"/>' +
+    '</linearGradient></defs>' +
+    '<rect x="7" y="7" width="106" height="106" rx="27" fill="none" stroke="url(#p2StartGrad)" stroke-width="4"/>' +
+    '<path d="M49 39 L86 60 L49 81 Z" fill="url(#p2StartGrad)"/>' +
+  '</svg>';
+function buildStartOverlay(onStart) {
+  const btn = el('button', 'p2-start');
+  btn.type = 'button';
+  btn.title = 'Start the presentation';
+  btn.setAttribute('aria-label', 'Start the presentation');
+  btn.innerHTML = '<span class="p2-start-glow" aria-hidden="true"></span>' +
+    '<span class="p2-start-mark">' + START_MARK_SVG + '</span>' +
+    '<span class="p2-start-text">Start presentation</span>';
+  btn.addEventListener('click', onStart);
+  return btn;
 }
 function button(text, title, onClick) {
   const b = el('button', 'p2-btn');

@@ -190,6 +190,51 @@ body {
 @media (max-width: 560px) { .p2-watermark img { width: 64px; } .p2-watermark { left: 8px; bottom: 8px; } }
 @media (prefers-reduced-motion: reduce) { .p2-watermark { transition: none; } }
 
+/* --- center "start" overlay (brand play mark) ---
+   A large, on-brand play affordance centred over the stage before playback.
+   Clicking it begins the presentation; it fades out once playing (.p2-started)
+   and returns on a full reset. */
+.p2-start {
+  position: absolute; inset: 0; z-index: 12; margin: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  background: radial-gradient(60% 60% at 50% 46%, rgba(8,10,14,.42), rgba(8,10,14,.66));
+  border: 0; cursor: pointer; color: var(--fg);
+  opacity: 1; transition: opacity .4s ease, visibility .4s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.p2-start-mark {
+  position: relative; display: grid; place-items: center;
+  width: clamp(96px, 18vmin, 168px); aspect-ratio: 1;
+}
+.p2-start-ico { width: 100%; height: 100%; display: block;
+  filter: drop-shadow(0 0 18px rgba(124,107,255,.55)); transition: transform .3s var(--ease, ease); }
+/* soft pulsing halo behind the mark */
+.p2-start-glow {
+  position: absolute; width: clamp(120px, 24vmin, 230px); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(124,107,255,.34), rgba(255,92,240,.12) 55%, transparent 72%);
+  filter: blur(2px); pointer-events: none;
+  animation: p2StartHalo 3.4s ease-in-out infinite;
+}
+.p2-start-text {
+  font-size: 13px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+  color: var(--fg); opacity: .82; text-shadow: 0 1px 6px rgba(0,0,0,.7);
+}
+/* gentle float + brighten on hover/focus */
+.p2-start:hover .p2-start-mark, .p2-start:focus-visible .p2-start-mark { animation: p2StartFloat 2.6s ease-in-out infinite; }
+.p2-start:hover .p2-start-ico, .p2-start:focus-visible .p2-start-ico {
+  transform: scale(1.06); filter: drop-shadow(0 0 26px rgba(255,92,240,.7));
+}
+.p2-start:focus-visible { outline: none; }
+.p2-start:focus-visible .p2-start-text { opacity: 1; }
+@keyframes p2StartHalo { 0%,100% { transform: scale(1); opacity: .85; } 50% { transform: scale(1.12); opacity: 1; } }
+@keyframes p2StartFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+/* hidden once the talk is playing */
+.p2-player.p2-started .p2-start { opacity: 0; visibility: hidden; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .p2-start-glow, .p2-start:hover .p2-start-mark, .p2-start:focus-visible .p2-start-mark { animation: none; }
+  .p2-start, .p2-start-ico { transition: none; }
+}
+
 /* --- caption (CC) overlay for the YouTube path ---
    Centred along the bottom of the VIDEO pane, readable at any pane size
    (split / focus / overlap PiP). Width hugs the text but is capped so long
@@ -277,7 +322,49 @@ body {
   font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--muted); white-space: nowrap; user-select: none;
 }
-.p2-modes { display: inline-flex; gap: 4px; }
+/* --- layout fold: one trigger that unfolds into the four mode options --- */
+.p2-fold { position: relative; display: inline-flex; }
+.p2-fold-trigger { position: relative; }
+/* a small caret hint that the button opens a menu */
+.p2-fold-trigger::after {
+  content: ""; position: absolute; top: 3px; right: 3px;
+  width: 0; height: 0; border-left: 3px solid transparent; border-right: 3px solid transparent;
+  border-top: 4px solid currentColor; opacity: .5; transition: transform .25s var(--ease, ease), opacity .2s;
+}
+.p2-fold.is-open .p2-fold-trigger::after { transform: rotate(180deg); opacity: .9; }
+.p2-fold.is-open .p2-fold-trigger { border-color: var(--accent); color: var(--accent); }
+.p2-fold-ico { display: block; height: 14px; }
+.p2-fold-ico .p2-mode-ico { width: 19px; height: 14px; }
+/* the unfolding panel — pops up above the bar; animates open */
+.p2-fold-panel {
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  display: flex; flex-direction: column; gap: 3px; padding: 6px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 10px 28px rgba(0,0,0,.55); z-index: 40;
+  transform-origin: bottom center;
+  opacity: 0; visibility: hidden;
+  transform: translateX(-50%) translateY(6px) scale(.92);
+  transition: opacity .22s var(--ease, ease), transform .26s var(--ease, ease), visibility .26s;
+}
+.p2-fold.is-open .p2-fold-panel {
+  opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0) scale(1);
+}
+/* options stagger in as the panel unfolds (.p2-fold prefix beats .p2-icon-btn) */
+.p2-fold .p2-fold-item {
+  flex-direction: row; gap: 9px; justify-content: flex-start; min-width: 148px;
+  text-align: left; padding: 8px 11px;
+  opacity: 0; transform: translateY(5px); transition: opacity .2s ease, transform .2s var(--ease, ease), border-color .15s, color .15s;
+}
+.p2-fold.is-open .p2-fold-item { opacity: 1; transform: none; }
+.p2-fold.is-open .p2-fold-item:nth-child(2) { transition-delay: .04s; }
+.p2-fold.is-open .p2-fold-item:nth-child(3) { transition-delay: .08s; }
+.p2-fold.is-open .p2-fold-item:nth-child(4) { transition-delay: .12s; }
+.p2-fold-item .p2-btn-label { font-size: 12px; text-transform: none; letter-spacing: 0; }
+.p2-fold-item.is-on { border-color: var(--accent); color: var(--accent); background: var(--panel-2); }
+@media (prefers-reduced-motion: reduce) {
+  .p2-fold-panel, .p2-fold-item, .p2-fold-trigger::after { transition: none; }
+  .p2-fold-item { opacity: 1; transform: none; }
+}
 /* Icon buttons: SVG glyph that depicts the layout, with a short label beneath. */
 .p2-icon-btn {
   display: inline-flex; flex-direction: column; align-items: center; gap: 3px;
@@ -292,8 +379,12 @@ body {
 }
 .p2-mode-btn.is-on, .p2-fs-btn.is-on { border-color: var(--accent); color: var(--accent); background: var(--panel); }
 .p2-btn.is-on { border-color: var(--accent); color: var(--accent); }
-/* Narrow widths: drop the text labels (icon + tooltip/aria-label remain). */
-@media (max-width: 560px) { .p2-btn-label { display: none; } }
+/* Narrow widths: drop the text labels (icon + tooltip/aria-label remain) — but
+   keep the unfolded layout options labelled, since the panel is a menu. */
+@media (max-width: 560px) {
+  .p2-btn-label { display: none; }
+  .p2-fold-item .p2-btn-label { display: block; }
+}
 
 /* resolver disclosure toggle (mobile only — desktop keeps the bar inline) */
 .p2-source-toggle {
