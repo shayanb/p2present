@@ -1,0 +1,14 @@
+{
+  "name": "p2present-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "p2present pastebin-lite: a Cloudflare Worker + KV backend that hosts p2present.json manifests behind short ids.",
+  "type": "module",
+  "main": "src/worker.js",
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "license": "MIT"
+}

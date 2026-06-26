@@ -1,0 +1,46 @@
+# wrangler.toml — p2present pastebin-lite Worker.
+#
+# Deploy with: `npx wrangler deploy` (see ../SERVICE.md for the full guide).
+# No secrets live in this file. The optional IPFS pin token is set out-of-band:
+#   npx wrangler secret put IPFS_PIN_TOKEN
+#
+# Before deploying, create a KV namespace and paste its id below:
+#   npx wrangler kv namespace create P2_KV
+#   npx wrangler kv namespace create P2_KV --preview
+
+name = "p2present"
+main = "src/worker.js"
+compatibility_date = "2024-11-01"
+
+# --- KV: stores manifests, rate-limit counters, reports ---------------------
+# Replace the placeholder ids with the ones `wrangler kv namespace create` prints.
+[[kv_namespaces]]
+binding = "P2_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_YOUR_PREVIEW_KV_NAMESPACE_ID"
+
+# --- public (non-secret) config; override per-deploy as you like ------------
+[vars]
+# Where /p/:id redirects humans (the static player). Point this at your app.
+APP_BASE = "https://p2present.com/app/"
+# CORS origin allowed to call the API ("*" = any; tighten to your app origin).
+ALLOW_ORIGIN = "*"
+# Limits (all optional — these are the built-in defaults, shown for visibility).
+MAX_BYTES = "262144"          # 256 KiB manifest cap
+RATE_MAX = "40"               # writes per window per IP
+RATE_WINDOW = "600"           # seconds
+MAX_TTL = "31536000"          # max requested expiry (1 year)
+REPORT_HIDE_THRESHOLD = "5"   # reports before a manifest is auto-hidden
+# --- optional IPFS mirror on save (off by default) --------------------------
+# Set IPFS_PIN = "true" AND provide the secret token to mirror every saved
+# manifest to IPFS (returns an ipfs:// alongside the short id):
+#   npx wrangler secret put IPFS_PIN_TOKEN     # e.g. a Pinata JWT
+IPFS_PIN = "false"
+# IPFS_PIN_ENDPOINT = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
+
+# --- custom domain (point p2present.com at this Worker) ----------------------
+# Uncomment + adjust to serve the API + /p/:id links from your own domain:
+# routes = [
+#   { pattern = "p2present.com/api/*", zone_name = "p2present.com" },
+#   { pattern = "p2present.com/p/*",   zone_name = "p2present.com" },
+# ]
