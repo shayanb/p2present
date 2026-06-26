@@ -25,6 +25,7 @@ The "Load the MoaV demo" button opens the *"Rage-Coding the Mother of All VPNs"*
 - **[SPEC.md](SPEC.md)** — the canonical `p2present.json` manifest reference (every field, source transports, loading/share formats, deep-links) + a [JSON Schema](docs/p2present.schema.json).
 - **[AUTHORING.md](AUTHORING.md)** — make a presentation start-to-finish: slides → host assets → build the manifest → share.
 - **[HOSTING.md](HOSTING.md)** — where to put your assets (plain URLs, IPFS, WebTorrent) and how each maps to a manifest entry.
+- **[SERVICE.md](SERVICE.md)** — the optional "Save & share" sharing service (a self-deployable Cloudflare Worker + KV that hosts manifests behind short `…/p/<id>` links).
 - **[DOCS.md](DOCS.md)** — a one-page index of everything above.
 - **[ROADMAP.md](ROADMAP.md)** — what's next: community manifest hosting, paid persistence (Arweave pay-once + pinning/seedboxes), and an ENS/EAS verified registry. Open core, free forever.
 
@@ -206,7 +207,8 @@ The resolver host decides what to load from the URL query — **first match wins
 |------|-------|
 | `?src=<base64>` | base64-decoded value is **either** an inline `p2present.json` **or** a source URL/CID/magnet (auto-detected). The compact, self-contained share format. |
 | `?manifest=<url>` | a `p2present.json` from any transport (`https` / `ipfs://` / `magnet:`). |
-| `?p=<name>` | a bundled local manifest at `content/<name>/manifest.json` shipped in your fork. |
+| `?p=<name>` | a bundled local manifest at `content/<name>/manifest.json` shipped in your fork (e.g. `demo`, `moav-pdf`). |
+| `?p=<id>` | any **other** value is a saved-presentation id, fetched from the [sharing service](SERVICE.md) (`<service>/api/p/<id>`). The short `…/p/<id>` link redirects here. |
 | `?demo` | alias for the bundled MoaV PDF demo (`?p=moav-pdf`). |
 | *(none)* | the bundled HTML demo. |
 
@@ -227,6 +229,12 @@ options: **Copy presentation link** (a self-contained `…?src=<base64>` link to
 whole presentation) and **Copy link to this moment** (the same link plus a
 `#t=…&slide=…` deep-link to the current slide + time). Either copies to your
 clipboard with a confirmation.
+
+Next to it, **💾 Save & share** POSTs the current manifest to the
+[sharing service](SERVICE.md) and copies back a short `…/p/<id>` link — no file to
+host yourself. The edit token is kept in your browser so you can update the same
+id later. The service base URL is configurable (default placeholder), so a fork
+points it at its own self-deployed Worker; see **[SERVICE.md](SERVICE.md)**.
 
 ### Deep-links (`#t=…&slide=…`)
 
@@ -359,10 +367,15 @@ The engine derives the active slide purely from `slideAtTime(videoTime)`. When t
 - ✅ **Thumbnail scrubber** — slide previews on hover/seek (PDF pages rendered live; HTML via authored thumbnails).
 - ✅ **Deep-links** — `#t=<seconds>&slide=<n>` opens at a spot; the hash tracks navigation; a 📍 "this spot" share variant.
 
+**Phase 7 — shipped:**
+
+- ✅ **Sharing service (pastebin-lite)** — a self-deployable [Cloudflare Worker + KV](SERVICE.md) that hosts manifests behind short `…/p/<id>` links: **💾 Save & share** in the player, `?p=<id>` loading, edit tokens (hashed server-side), expiry, public/unlisted, size cap + rate limit + report endpoint, and an optional IPFS mirror on save.
+
 **Next up:**
 
 - Optional in-page Helia (gateway-free IPFS) when the runtime is feasible.
 - Per-slide notes / transcript track; authored HTML-deck thumbnail capture.
+- Paid persistence (Arweave pay-once + pinning/seedboxes) and a verified registry — see [ROADMAP.md](ROADMAP.md).
 
 ---
 
@@ -371,6 +384,7 @@ The engine derives the active slide purely from `slideAtTime(videoTime)`. When t
 ```
 SPEC.md                   # canonical manifest schema reference
 AUTHORING.md HOSTING.md   # start-to-finish authoring + asset-hosting guides
+SERVICE.md                # the optional "Save & share" service (Worker + KV) guide
 DOCS.md                   # one-page documentation index
 docs/                     # ← GitHub Pages root (served as-is, no build)
   index.html  app.css     # resolver shell + chrome styles
@@ -379,7 +393,8 @@ docs/                     # ← GitHub Pages root (served as-is, no build)
   builder/                # visual manifest builder (index.html, builder.js/.css)
   host/                   # IPFS pin + WebTorrent seed helper (index.html, host.js/.css)
   src/
-    main.js               # resolver: source (https/ipfs/magnet/base64) → manifest → Player; deep-link hash
+    main.js               # resolver: source (https/ipfs/magnet/base64/service id) → manifest → Player; deep-link hash; Save & share
+    service.js            # client for the sharing service (save/update/report; configurable base URL)
     player.js             # layout modes + divider + fullscreen + scrubber thumbnails + deep-links + input
     sync.js               # bidirectional timeline engine
     subtitles.js          # vtt/srt parsing + caption rendering (track + overlay)
@@ -392,6 +407,10 @@ docs/                     # ← GitHub Pages root (served as-is, no build)
     transitions/ { index, cut, fade, slide, none }
   content/demo/           # the bundled HTML-deck demo (deck + manifest + subtitles)
   content/moav-pdf/       # the bundled PDF-deck demo (slides.pdf + manifest)
+service/                  # ← optional "Save & share" backend (Cloudflare Worker + KV)
+  src/worker.js           # the Worker: POST/GET/PUT/DELETE/report; expiry; rate limit; IPFS mirror
+  wrangler.toml           # deploy config (KV binding, vars; no secrets) — see SERVICE.md
+  test/worker.test.mjs    # handler unit tests against a mock KV
 scripts/  { import-chapters, test, smoke }
 ```
 

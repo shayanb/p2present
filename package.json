@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "node --version >/dev/null && npx --yes serve docs -l 5173",
     "preview": "npx --yes serve docs -l 5173",
-    "test": "node scripts/test.mjs",
+    "test": "node scripts/test.mjs && node --test \"service/test/*.test.mjs\"",
+    "test:app": "node scripts/test.mjs",
+    "test:service": "node --test \"service/test/*.test.mjs\"",
     "smoke": "node scripts/smoke.mjs",
     "import-chapters": "node scripts/import-chapters.mjs"
   },

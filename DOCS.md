@@ -11,6 +11,7 @@ presentation slides in sync with the talk video — see the
 | **[README.md](README.md)** | Overview, live demo, full feature list, quick start, fork & self-host, screenshots, project layout. |
 | **[AUTHORING.md](AUTHORING.md)** | Make a presentation start-to-finish: slides → host assets → build the manifest → share. |
 | **[HOSTING.md](HOSTING.md)** | Where to put your assets — plain URLs, IPFS (with/without your own pin), WebTorrent (browser vs CLI) — and how each maps to a manifest entry. |
+| **[SERVICE.md](SERVICE.md)** | The optional "Save & share" backend: deploy a Cloudflare Worker + KV that hosts manifests behind short `…/p/<id>` links; configure the app to use it; optional IPFS mirror. |
 | **[SPEC.md](SPEC.md)** | The canonical `p2present.json` v1.0 reference: every field, source transports, loading/share formats, deep-links, validation. |
 | **[JSON Schema](docs/p2present.schema.json)** | Machine-readable manifest schema (draft-07) for validation. |
 
@@ -28,6 +29,7 @@ presentation slides in sync with the talk video — see the
 
 - **Make a presentation** → [AUTHORING.md](AUTHORING.md)
 - **Get assets onto IPFS / WebTorrent** → [HOSTING.md](HOSTING.md) · [Host helper](https://ibeezhan.github.io/p2present/host/)
+- **Save & share a manifest behind a short link** → [SERVICE.md](SERVICE.md)
 - **Look up a manifest field** → [SPEC.md](SPEC.md)
 - **Validate a manifest** → [SPEC → Validation](SPEC.md#validation)
 - **Deep-link to a moment** → [SPEC → Deep-links](SPEC.md#deep-links-tslide)
@@ -38,6 +40,6 @@ presentation slides in sync with the talk video — see the
 
 ```bash
 npm run preview   # serve ./docs at http://localhost:5173 (no build step)
-npm test          # unit tests (pure logic + schema validator)
+npm test          # unit tests (pure logic + schema validator + service Worker handlers)
 npm run smoke     # headless-Chrome smoke + screenshots
 ```

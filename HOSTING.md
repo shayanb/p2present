@@ -217,6 +217,28 @@ WebTorrent are not subject to this (they use an iframe / WebRTC respectively).
 
 ---
 
+## Hosting the manifest itself (optional sharing service)
+
+Everything above hosts your **assets**; the `p2present.json` manifest that ties
+them together still needs to live somewhere a link can point at. Three options,
+simplest first:
+
+1. **The sharing service ("Save & share").** With a [pastebin-lite service](SERVICE.md)
+   deployed (or using the community one), the player's **💾 Save & share** button
+   POSTs the current manifest and hands back a short `…/p/<id>` link — no file to
+   host yourself. You keep an edit token (in your browser) to update it later.
+   This is the **community-hosting backend**: a small Cloudflare Worker + KV that
+   anyone can self-deploy — see **[SERVICE.md](SERVICE.md)**.
+2. **A static URL.** Drop `p2present.json` on any CORS-enabled host and load it
+   with `?manifest=https://…/p2present.json` (same rules as plain-URL assets above).
+3. **Inline.** The 🔗 **Share → Copy presentation link** button base64-encodes the
+   whole manifest into a self-contained `?src=<base64>` link — nothing to host at all.
+
+> The sharing service never touches your **assets** — it only stores the small
+> JSON manifest (which points at assets hosted however you chose above).
+
+---
+
 ## Next step
 
 Once your assets are hosted, open the **[Builder](https://ibeezhan.github.io/p2present/builder/)**
