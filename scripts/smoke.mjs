@@ -3,7 +3,9 @@
 // Serves ./docs over a local static server (plus a few in-memory /__fixtures__/
 // manifests so we can exercise provider fallback / p2p routing without shipping
 // test files to Pages), drives it with Playwright (cached Chromium), and checks:
-//   - the demo player mounts; app assets return 200; no same-origin console errors
+//   - the landing page (/) renders hero + how-it-works + features + roadmap; the
+//     "Load the MoaV demo" CTA deep-links into /app/; legacy ?demo/?p redirect to /app/
+//   - the demo player mounts (now at /app/); app assets return 200; no console errors
 //   - resolver routing: ?manifest= / ?p= / ?src=<base64 url> / ?src=<base64 inline>
 //   - p2p routing: ipfs:// and magnet: sources reach a real loading/fallback state
 //     (NOT the old "coming soon" stub)
@@ -155,6 +157,53 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 
   try {
+    // === 0. Landing page (/) — hero, sections, CTA, redirect, responsive ===
+    {
+      const p = await newPage(context);
+      const homeAssets = {};
+      p.on('response', (r) => { const u = r.url(); if (u.startsWith(ORIGIN)) homeAssets[u.replace(ORIGIN, '')] = r.status(); });
+      await p.goto(`${ORIGIN}/`, { waitUntil: 'load' });
+      ok('home: hero renders the brand name', /p2present/i.test(await p.textContent('.hero h1')));
+      const tagline = await p.textContent('.hero .tagline');
+      ok('home: one-liner present', /play themselves/i.test(tagline) && /peer-to-peer/i.test(tagline), tagline);
+      const cta = await p.getAttribute('.hero .btn-primary', 'href');
+      ok('home: CTA deep-links into the player demo', /^app\/\?p=moav-pdf$/.test(cta || ''), String(cta));
+      ok('home: how-it-works has 3 steps', (await p.$$('#how .step')).length === 3);
+      ok('home: features grid present', (await p.$$('#features .feat')).length >= 6, String((await p.$$('#features .feat')).length));
+      ok('home: hosted+registry has 3 plan cards', (await p.$$('#roadmap .plan-card')).length === 3);
+      const tags = await p.evaluate(() => [...document.querySelectorAll('#roadmap .tag')].map((t) => t.textContent.trim().toLowerCase()));
+      ok('home: roadmap framing (coming / roadmap tags)', tags.filter((t) => t === 'coming').length === 2 && tags.includes('roadmap'), tags.join(','));
+      ok('home: links to ROADMAP + repo + builder', (await p.$$('a[href*="ROADMAP.md"]')).length >= 1 && (await p.$$('a[href*="github.com/ibeezhan/p2present"]')).length >= 1 && (await p.$$('a[href="builder/"]')).length >= 1);
+      const og = await p.evaluate(() => ({
+        title: document.querySelector('meta[property="og:title"]')?.content || '',
+        image: document.querySelector('meta[property="og:image"]')?.content || '',
+        desc: document.querySelector('meta[name="description"]')?.content || '',
+      }));
+      ok('home: OG/meta tags present', /p2present/i.test(og.title) && /\.png$/.test(og.image) && og.desc.length > 20, JSON.stringify(og).slice(0, 80));
+      ok('home: favicon link present', await p.$('link[rel="icon"]'));
+      ok('home: home.css 200', homeAssets['/home.css'] === 200, String(homeAssets['/home.css']));
+      for (const w of [1280, 780, 390]) {
+        await p.setViewportSize({ width: w, height: w === 390 ? 800 : 860 });
+        await p.waitForTimeout(250);
+        await p.screenshot({ path: path.join(SHOTS, `home-${w}.png`), fullPage: true });
+      }
+      const noHScroll = await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 2);
+      ok('home: no horizontal overflow at 390px', noHScroll);
+      ok('home: no same-origin console errors', p._consoleErrors.length === 0, p._consoleErrors.slice(0, 2).join(' | '));
+      await p.close();
+    }
+
+    // === 0b. Legacy/aliased player links on / redirect to /app/ ===
+    {
+      const p = await newPage(context);
+      await p.goto(`${ORIGIN}/?demo`, { waitUntil: 'load' });
+      const landed = await p.waitForFunction(() => location.pathname.endsWith('/app/'), { timeout: 8000 }).then(() => true).catch(() => false);
+      ok('home: ?demo redirects to /app/', landed, await p.evaluate(() => location.pathname));
+      const mounted = await p.waitForSelector('.p2-stage', { timeout: 30000 }).then(() => true).catch(() => false);
+      ok('home: redirected demo mounts the player', mounted);
+      await p.close();
+    }
+
     // === 1. Demo loads (https/youtube), responsive widths, asset 200s ===
     const page = await newPage(context);
     const assetStatus = {};
@@ -162,7 +211,7 @@ async function main() {
       const u = r.url();
       if (u.startsWith(ORIGIN)) assetStatus[u.replace(ORIGIN, '')] = r.status();
     });
-    await page.goto(`${ORIGIN}/`, { waitUntil: 'load' });
+    await page.goto(`${ORIGIN}/app/`, { waitUntil: 'load' });
     // The deck iframe loads LAST in Player.mount(), so waiting for it means the
     // whole player (video + deck + controls + subs) finished mounting.
     const mounted = await page.waitForSelector('.p2-deck-frame', { timeout: 30000 })
@@ -198,7 +247,7 @@ async function main() {
     ];
     for (const [label, query] of routeCases) {
       const p = await newPage(context);
-      await p.goto(`${ORIGIN}/${query}`, { waitUntil: 'load' });
+      await p.goto(`${ORIGIN}/app/${query}`, { waitUntil: 'load' });
       const titled = await p.waitForFunction(
         () => document.getElementById('deck-title')?.textContent?.includes('Rage-Coding'),
         { timeout: 20000 }).then(() => true).catch(() => false);
@@ -214,7 +263,7 @@ async function main() {
     };
     {
       const p = await newPage(context);
-      await p.goto(`${ORIGIN}/?src=${encodeURIComponent(b64(JSON.stringify(inline)))}`, { waitUntil: 'load' });
+      await p.goto(`${ORIGIN}/app/?src=${encodeURIComponent(b64(JSON.stringify(inline)))}`, { waitUntil: 'load' });
       const titled = await p.waitForFunction(
         () => document.getElementById('deck-title')?.textContent === 'Inline B64 Deck',
         { timeout: 15000 }).then(() => true).catch(() => false);
@@ -225,7 +274,7 @@ async function main() {
     // === 3. Provider source-fallback: ipfs(dead) → mp4(local) ===
     {
       const p = await newPage(context);
-      await p.goto(`${ORIGIN}/?manifest=${encodeURIComponent(`${ORIGIN}/__fixtures__/fallback.json`)}`, { waitUntil: 'load' });
+      await p.goto(`${ORIGIN}/app/?manifest=${encodeURIComponent(`${ORIGIN}/__fixtures__/fallback.json`)}`, { waitUntil: 'load' });
       const hasVideo = await p.waitForSelector('.p2-video-pane video', { timeout: 20000 })
         .then(() => true).catch(() => false);
       ok('fallback: ipfs(dead)→mp4 yields <video>', hasVideo);
@@ -317,7 +366,7 @@ async function main() {
     // best-effort below (needs network) since its known race was the original bug.
     {
       const p = await newPage(context);
-      await p.goto(`${ORIGIN}/?manifest=${encodeURIComponent(`${ORIGIN}/__fixtures__/seek.json`)}`, { waitUntil: 'load' });
+      await p.goto(`${ORIGIN}/app/?manifest=${encodeURIComponent(`${ORIGIN}/__fixtures__/seek.json`)}`, { waitUntil: 'load' });
       await p.waitForSelector('.p2-video-pane video', { timeout: 20000 }).catch(() => {});
       await p.waitForFunction(() => { const v = document.querySelector('.p2-video-pane video'); return v && v.duration > 1; }, { timeout: 15000 }).catch(() => {});
 
@@ -365,7 +414,7 @@ async function main() {
     // Skipped (counted as pass) when the iframe API can't load in this environment.
     {
       const p = await newPage(context);
-      await p.goto(`${ORIGIN}/?p=demo`, { waitUntil: 'load' });
+      await p.goto(`${ORIGIN}/app/?p=demo`, { waitUntil: 'load' });
       await p.waitForSelector('.p2-deck-frame', { timeout: 30000 }).catch(() => {});
       // Wait until the YT provider reports a real duration (i.e. the API loaded).
       const ytReady = await p.waitForFunction(
@@ -395,7 +444,7 @@ async function main() {
       ['magnet:', 'magnet:?xt=urn:btih:deadbeefdeadbeefdeadbeefdeadbeefdeadbeef&dn=p2present.json', 'magnet-loading.png'],
     ]) {
       const p = await newPage(context);
-      await p.goto(`${ORIGIN}/`, { waitUntil: 'load' });
+      await p.goto(`${ORIGIN}/app/`, { waitUntil: 'load' });
       // Open the source bar + type the p2p source, submit.
       await p.fill('#source-input', src);
       // Capture the loading state shortly after submit.
@@ -411,7 +460,7 @@ async function main() {
     // === 5. PDF demo (pdf.js deck adapter) renders + syncs ===
     {
       const p = await newPage(context);
-      await p.goto(`${ORIGIN}/?p=moav-pdf`, { waitUntil: 'load' });
+      await p.goto(`${ORIGIN}/app/?p=moav-pdf`, { waitUntil: 'load' });
       await p.waitForSelector('.p2-pdf-stage', { timeout: 30000 }).catch(() => {});
       // Wait for slide 1 to actually be rendered + visible (not display:none).
       const visible = await p.waitForFunction(() => {
@@ -508,7 +557,7 @@ async function main() {
         deck: { type: 'embed', sources: [{ src: `${ORIGIN}/content/demo/slides/index.html` }], slideCount: 7, embed: { nav: 'hash', param: 'slide' } },
         timing: [{ time: 0, slide: 1 }, { time: 2, slide: 2 }],
       };
-      await p.goto(`${ORIGIN}/?src=${encodeURIComponent(b64(JSON.stringify(embed)))}`, { waitUntil: 'load' });
+      await p.goto(`${ORIGIN}/app/?src=${encodeURIComponent(b64(JSON.stringify(embed)))}`, { waitUntil: 'load' });
       const frame = await p.waitForSelector('.p2-embed-frame', { timeout: 20000 }).then(() => true).catch(() => false);
       ok('embed deck: external slides render in an <iframe>', frame);
       const sc = await p.evaluate(() => document.querySelector('.p2-slidecount')?.textContent || '');
@@ -520,7 +569,7 @@ async function main() {
     // === 6. Deep-link hash opens the player at the right time/slide ===
     {
       const p = await newPage(context);
-      await p.goto(`${ORIGIN}/?p=demo#t=575&slide=13`, { waitUntil: 'load' });
+      await p.goto(`${ORIGIN}/app/?p=demo#t=575&slide=13`, { waitUntil: 'load' });
       await p.waitForSelector('.p2-deck-frame', { timeout: 30000 }).catch(() => {});
       const atSlide = await p.waitForFunction(
         () => /\b13 \//.test(document.querySelector('.p2-slidecount')?.textContent || ''),
