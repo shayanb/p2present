@@ -219,6 +219,20 @@ body {
 .p2-cc-item:hover { border-color: var(--accent); }
 .p2-cc-item.is-active { color: var(--accent); border-color: var(--accent-dim); }
 
+/* Fullscreen fallback for platforms without element Fullscreen API (iOS Safari):
+   pin the whole player over the viewport. dvh + safe-area keep it clear of the
+   notch and the dynamic toolbar. */
+.p2-player.is-maximized {
+  position: fixed; inset: 0; z-index: 9999;
+  width: 100vw; height: 100vh; height: 100dvh;
+  margin: 0; background: var(--bg);
+  padding: max(8px, env(safe-area-inset-top))
+           max(8px, env(safe-area-inset-right))
+           max(8px, env(safe-area-inset-bottom))
+           max(8px, env(safe-area-inset-left));
+}
+body.p2-maximized { overflow: hidden; }
+
 .p2-empty {
   margin: auto; color: var(--muted); text-align: center; padding: 40px;
   font-size: 15px; max-width: 640px;

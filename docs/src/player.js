@@ -181,12 +181,12 @@ export class Player {
     // CC (subtitles) menu — only when tracks exist.
     const ccWrap = this._buildCcMenu();
 
-    // Fullscreen.
+    // Fullscreen (native where supported; CSS-maximized fallback for iOS Safari).
     this.btnFs = button('⛶', 'Fullscreen (f)', () => this._toggleFullscreen());
+    this.btnFs.setAttribute('aria-pressed', 'false');
     document.addEventListener('fullscreenchange', this._onFsChange = () => {
-      const on = document.fullscreenElement === this.root;
-      this.btnFs.classList.toggle('is-on', on);
-      this.btnFs.title = on ? 'Exit fullscreen (f)' : 'Fullscreen (f)';
+      this._updateFsButton();
+      if (this.mode === 'overlap') this._applyPipGeometry();
     });
 
     // Group the layout-mode switcher + fullscreen so they read as one "view"
@@ -461,12 +461,41 @@ export class Player {
     v.style.height = `${g.height}px`;
   }
 
+  // iOS Safari doesn't support the Fullscreen API on arbitrary elements (only
+  // <video> via webkitEnterFullscreen), so feature-detect and fall back to a
+  // CSS "maximized" full-viewport mode — the button always does something.
+  _canNativeFs() {
+    return !!this.root.requestFullscreen && !!document.fullscreenEnabled;
+  }
+
   _toggleFullscreen() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen?.();
+    if (document.fullscreenElement) { document.exitFullscreen?.(); return; }
+    if (this.root.classList.contains('is-maximized')) { this._setMaximized(false); return; }
+    if (this._canNativeFs()) {
+      // If the native request rejects (some embedded WebViews), maximize instead.
+      this.root.requestFullscreen().catch(() => this._setMaximized(true));
     } else {
-      this.root.requestFullscreen?.().catch((err) => console.warn('Fullscreen failed:', err.message));
+      this._setMaximized(true);
     }
+  }
+
+  /** CSS fallback: pin the player over the whole viewport (or release it). */
+  _setMaximized(on) {
+    this.root.classList.toggle('is-maximized', on);
+    document.body.classList.toggle('p2-maximized', on);
+    this._updateFsButton();
+    if (this.mode === 'overlap') this._applyPipGeometry();
+  }
+
+  _updateFsButton() {
+    if (!this.btnFs) return;
+    const on = document.fullscreenElement === this.root
+      || this.root.classList.contains('is-maximized');
+    this.btnFs.classList.toggle('is-on', on);
+    this.btnFs.setAttribute('aria-pressed', String(on));
+    const title = on ? 'Exit fullscreen (f)' : 'Fullscreen (f)';
+    this.btnFs.title = title;
+    this.btnFs.setAttribute('aria-label', title);
   }
 
   // --- input ---------------------------------------------------------------
@@ -488,6 +517,7 @@ export class Player {
       else if (k === 'Home') { e.preventDefault(); this.sync.gotoSlide(1); }
       else if (k === 'End') { e.preventDefault(); this.sync.gotoSlide(this.deck.slideCount); }
       else if (k === 'f' || k === 'F') { e.preventDefault(); this._toggleFullscreen(); }
+      else if (k === 'Escape' && this.root.classList.contains('is-maximized')) { e.preventDefault(); this._setMaximized(false); }
       else if (k === 'm' || k === 'M') { e.preventDefault(); this._cycleMode(); }
     };
     window.addEventListener('keydown', this._onKey);
@@ -518,6 +548,8 @@ export class Player {
 
   destroy() {
     this.sync?.stop();
+    this.root.classList.remove('is-maximized');
+    document.body.classList.remove('p2-maximized');
     window.removeEventListener('keydown', this._onKey);
     window.removeEventListener('resize', this._onResize);
     document.removeEventListener('fullscreenchange', this._onFsChange);
