@@ -15,13 +15,18 @@
   <meta property="og:title" content="p2present — presentations that play themselves" />
   <meta property="og:description" content="Your slides and your talk, in perfect sync — scrub to any moment, together. Cinematic, link-anywhere, open source." />
   <meta property="og:url" content="https://ibeezhan.github.io/p2present/" />
-  <meta property="og:image" content="https://ibeezhan.github.io/p2present/screenshots/demo-youtube-1280.png" />
+  <meta property="og:image" content="https://ibeezhan.github.io/p2present/brand/logo.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="p2present — presentations that play themselves" />
   <meta name="twitter:description" content="Your slides and your talk, in perfect sync — scrub to any moment, together. Open source, free forever." />
-  <meta name="twitter:image" content="https://ibeezhan.github.io/p2present/screenshots/demo-youtube-1280.png" />
+  <meta name="twitter:image" content="https://ibeezhan.github.io/p2present/brand/logo.png" />
 
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎞️</text></svg>" />
+  <!-- favicons + PWA manifest (brand assets in /brand) -->
+  <link rel="icon" href="brand/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="brand/icon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="brand/icon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="brand/icon-180.png" />
+  <link rel="manifest" href="site.webmanifest" />
   <link rel="stylesheet" href="home.css" />
   <!-- Without JS, the reveal-on-scroll content would stay hidden and the morph
        track would be dead space — so show everything and collapse the track. -->
@@ -54,7 +59,7 @@
 
   <header class="top">
     <a class="brand" href="./" aria-label="p2present home">
-      <span class="logo">🎞️</span><span>p2present</span>
+      <img class="logo" src="brand/icon-48.png" width="48" height="48" alt="" /><span>p2present</span>
     </a>
     <nav>
       <a class="hide-sm" href="#showcase">Showcase</a>
@@ -69,6 +74,18 @@
     <!-- ===================== HERO ===================== -->
     <section class="hero">
       <div class="wrap hero-inner">
+        <!-- Brand mark: the ring+panels base (no dots) with two glowing peer
+             "planet" dots overlaid on an inline SVG. The dots orbit the ring as
+             you scroll (home.js); static on the ring under reduced motion. The
+             SVG shares the artwork's 1254×1254 space so the dots sit exactly on
+             the ring. mix-blend:screen drops the artwork's black backdrop. -->
+        <figure class="hero-logo" aria-hidden="true">
+          <img class="hero-logo-base" src="brand/logo-hero-base.png" width="1254" height="1254" alt="" />
+          <svg class="hero-orbit" viewBox="0 0 1254 1254" preserveAspectRatio="xMidYMid meet">
+            <circle class="planet planet-cyan" cx="801.4" cy="914.6" r="26" />
+            <circle class="planet planet-magenta" cx="485.7" cy="316.0" r="26" />
+          </svg>
+        </figure>
         <span class="eyebrow"><span class="dotpulse"></span>Now playing</span>
         <h1>Presentations that<br />play themselves<span class="dot">.</span></h1>
         <p class="tagline">Your slides and your talk, in perfect sync — scrub to any moment, together.</p>
@@ -236,7 +253,7 @@
 
   <footer class="site">
     <div class="wrap cols">
-      <span class="brand"><span class="logo" style="font-size:18px">🎞️</span><span>p2present</span></span>
+      <span class="brand"><img class="logo" src="brand/icon-32.png" width="32" height="32" alt="" /><span>p2present</span></span>
       <a href="app/">Player</a>
       <a href="builder/">Builder</a>
       <a href="host/">Host assets</a>

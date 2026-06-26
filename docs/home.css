@@ -109,10 +109,11 @@ h1, h2, h3 { line-height: 1.12; margin: 0 0 .4em; letter-spacing: -.02em; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .2px; color: var(--fg); }
 .brand:hover { text-decoration: none; }
 .brand .logo {
-  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px;
-  font-size: 17px; background: rgba(79,209,197,.10); border: 1px solid var(--line-2);
+  width: 30px; height: 30px; border-radius: 9px; object-fit: contain; display: block;
+  background: rgba(79,209,197,.06); border: 1px solid var(--line-2);
   box-shadow: 0 0 18px rgba(124,107,255,.25);
 }
+footer.site .brand .logo { width: 24px; height: 24px; border-radius: 7px; }
 .top nav { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .top nav a {
   color: var(--fg); font-size: 14px; padding: 7px 13px; border-radius: 999px;
@@ -153,6 +154,35 @@ h1, h2, h3 { line-height: 1.12; margin: 0 0 .4em; letter-spacing: -.02em; }
  * ============================================================= */
 .hero { position: relative; padding: clamp(64px, 13vh, 132px) 0 64px; }
 .hero-inner { max-width: 880px; }
+
+/* ---- hero brand mark + scroll-orbit planets ---- */
+.hero-logo {
+  position: relative; margin: 0 0 6px; width: clamp(220px, 34vw, 380px);
+  aspect-ratio: 1 / 1; max-width: 100%;
+}
+.hero-logo .hero-logo-base {
+  display: block; width: 100%; height: 100%; object-fit: contain;
+  /* the artwork is neon-on-black; screen drops the black so it melts into the page */
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 28px rgba(124,107,255,.28));
+}
+.hero-orbit {
+  position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible;
+  pointer-events: none;
+}
+.hero-orbit .planet {
+  /* the glow; will-change keeps the per-frame cx/cy updates cheap */
+  will-change: transform; transform-box: fill-box; transform-origin: center;
+}
+.hero-orbit .planet-cyan {
+  fill: #4fd1c5;
+  filter: drop-shadow(0 0 6px #4fd1c5) drop-shadow(0 0 16px rgba(79,209,197,.85));
+}
+.hero-orbit .planet-magenta {
+  fill: #ff5cf0;
+  filter: drop-shadow(0 0 6px #ff5cf0) drop-shadow(0 0 16px rgba(255,92,240,.85));
+}
+
 .eyebrow {
   display: inline-flex; align-items: center; gap: 9px;
   font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;

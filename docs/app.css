@@ -36,7 +36,8 @@ body {
   flex-wrap: wrap;
 }
 .p2-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.p2-logo { font-size: 20px; }
+.p2-logo, .p2-home img { width: 26px; height: 26px; border-radius: 7px; object-fit: contain; display: block; }
+.p2-home { display: inline-flex; line-height: 0; text-decoration: none; }
 .p2-name { letter-spacing: 0.3px; }
 .p2-deck-title { color: var(--muted); font-weight: 400; font-size: 14px; }
 .p2-deck-title::before { content: "·"; margin-right: 8px; }
@@ -174,6 +175,20 @@ body {
     linear-gradient(135deg, transparent 50%, var(--accent-dim) 50%, var(--accent-dim) 62%,
       transparent 62%, transparent 74%, var(--accent-dim) 74%, var(--accent-dim) 86%, transparent 86%);
 }
+
+/* --- brand watermark ---
+   Bottom-left of the stage so it never collides with the PiP video (defaults
+   bottom-right), the centered captions, or the controls bar below the stage.
+   Opaque mark kept subtle but clearly legible; brightens on hover. */
+.p2-watermark {
+  position: absolute; left: 12px; bottom: 10px; z-index: 6;
+  line-height: 0; opacity: .62; transition: opacity .2s ease, transform .2s ease;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.55));
+}
+.p2-watermark img { width: 88px; height: auto; display: block; }
+.p2-watermark:hover, .p2-watermark:focus-visible { opacity: 1; transform: translateY(-1px); }
+@media (max-width: 560px) { .p2-watermark img { width: 64px; } .p2-watermark { left: 8px; bottom: 8px; } }
+@media (prefers-reduced-motion: reduce) { .p2-watermark { transition: none; } }
 
 /* --- caption (CC) overlay for the YouTube path ---
    Centred along the bottom of the VIDEO pane, readable at any pane size

@@ -11,7 +11,16 @@
   <meta property="og:title" content="p2present — Docs" />
   <meta property="og:description" content="The manifest spec, authoring guide, JSON schema, and tooling for p2present." />
   <meta property="og:url" content="https://ibeezhan.github.io/p2present/docs/" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>📚</text></svg>" />
+  <meta property="og:image" content="https://ibeezhan.github.io/p2present/brand/logo.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://ibeezhan.github.io/p2present/brand/logo.png" />
+
+  <!-- favicons + PWA manifest (brand assets in /brand) -->
+  <link rel="icon" href="../brand/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="../brand/icon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="../brand/icon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="../brand/icon-180.png" />
+  <link rel="manifest" href="../site.webmanifest" />
   <link rel="stylesheet" href="../home.css" />
   <style>
     /* docs-hub-only tweaks layered over the shared cinematic theme */
@@ -41,7 +50,7 @@
   <div class="vignette" aria-hidden="true"></div>
 
   <header class="top">
-    <a class="brand" href="../" aria-label="p2present home"><span class="logo">🎞️</span><span>p2present</span></a>
+    <a class="brand" href="../" aria-label="p2present home"><img class="logo" src="../brand/icon-48.png" width="48" height="48" alt="" /><span>p2present</span></a>
     <nav>
       <a class="hide-sm" href="../#showcase">Showcase</a>
       <a class="hide-sm" href="../app/">Player</a>
@@ -147,7 +156,7 @@
 
   <footer class="site">
     <div class="wrap cols">
-      <span class="brand"><span class="logo" style="font-size:18px">🎞️</span><span>p2present</span></span>
+      <span class="brand"><img class="logo" src="../brand/icon-32.png" width="32" height="32" alt="" /><span>p2present</span></span>
       <a href="../app/">Player</a>
       <a href="../builder/">Builder</a>
       <a href="../host/">Host assets</a>

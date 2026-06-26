@@ -6,14 +6,27 @@
   <meta name="theme-color" content="#0d0f12" />
   <title>p2present — host your assets (Arweave / IPFS / WebTorrent / S3)</title>
   <meta name="description" content="Put presentation assets onto permanent or P2P storage via pluggable providers: Arweave (pay-once permanent), IPFS pinning, WebTorrent seeding, or S3/https. Produces ar:// ipfs:// magnet: and https references for a p2present.json manifest." />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>📤</text></svg>" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="p2present" />
+  <meta property="og:title" content="p2present — host your assets" />
+  <meta property="og:description" content="Put presentation assets onto permanent or P2P storage via pluggable providers." />
+  <meta property="og:image" content="https://ibeezhan.github.io/p2present/brand/logo.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://ibeezhan.github.io/p2present/brand/logo.png" />
+
+  <!-- favicons + PWA manifest (brand assets in /brand) -->
+  <link rel="icon" href="../brand/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="../brand/icon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="../brand/icon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="../brand/icon-180.png" />
+  <link rel="manifest" href="../site.webmanifest" />
   <link rel="stylesheet" href="../app.css" />
   <link rel="stylesheet" href="host.css" />
 </head>
 <body class="p2-builder-body">
   <header class="p2-header">
     <div class="p2-brand">
-      <a class="p2-home" href="../" title="Back to the player" aria-label="Back to the player">🎞️</a>
+      <a class="p2-home" href="../" title="p2present home" aria-label="p2present home"><img src="../brand/icon-32.png" width="32" height="32" alt="" /></a>
       <span class="p2-name">p2present</span>
       <span class="p2-deck-title">Host your assets</span>
     </div>
