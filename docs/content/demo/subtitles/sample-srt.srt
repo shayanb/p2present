@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:06,000
+[Sample · SRT] This track ships as SubRip (.srt)…
+
+2
+00:00:06,000 --> 00:00:14,000
+…and is converted to WebVTT in the browser at load time.
+
+3
+00:00:14,000 --> 00:00:22,000
+It proves p2present accepts both .vtt and .srt sources.
+
+4
+00:00:22,000 --> 00:00:30,000
+Sample only — not a real transcript.

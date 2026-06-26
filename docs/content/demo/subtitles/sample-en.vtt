@@ -1,0 +1,22 @@
+WEBVTT
+
+NOTE
+SAMPLE captions — a handful of placeholder cues bundled only to demonstrate the
+p2present subtitle feature (CC menu + synced overlay). These are NOT a real
+transcript of the talk. Replace this file with a full .vtt or .srt for production.
+
+1
+00:00:00.000 --> 00:00:06.000
+[Sample caption] Rage-Coding the Mother of All VPNs — Berlin 2026.
+
+2
+00:00:06.000 --> 00:00:14.000
+This is a SAMPLE subtitle track demonstrating p2present captions.
+
+3
+00:00:14.000 --> 00:00:22.000
+Switch languages or turn captions off from the CC menu in the control bar.
+
+4
+00:00:22.000 --> 00:00:30.000
+Replace this file with the real transcript (.vtt or .srt) when you fork.

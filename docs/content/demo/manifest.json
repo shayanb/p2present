@@ -1,9 +1,35 @@
 {
+  "p2present": "1.0",
   "title": "Rage-Coding the Mother of All VPNs — Berlin 2026",
-  "_comment": "SEED TIMINGS — approximate placeholders across the 23-slide deck. Edit sync[].time to match the real talk (run scripts/import-chapters.mjs against a yt-dlp .info.json to regenerate). Times are float SECONDS; you may also write \"MM:SS\" strings.",
-  "video": { "provider": "youtube", "src": "uYygWN1MZDE" },
-  "deck": { "type": "html", "src": "slides/index.html" },
-  "sync": [
+  "_comment": "SEED TIMINGS — approximate placeholders across the 23-slide deck. Edit timing[].time to match the real talk (run scripts/import-chapters.mjs against a yt-dlp .info.json to regenerate). Times are float SECONDS; you may also write \"MM:SS\" strings.",
+  "meta": {
+    "author": "Shayan Bahal",
+    "event": "Berlin 2026",
+    "date": "2026",
+    "description": "Slides synced to the talk video — built with p2present."
+  },
+  "video": {
+    "sources": [
+      { "provider": "youtube", "src": "uYygWN1MZDE" }
+    ]
+  },
+  "deck": {
+    "type": "html",
+    "sources": [
+      { "src": "slides/index.html" }
+    ],
+    "slideCount": 23
+  },
+  "subtitles": [
+    { "lang": "en", "label": "English (sample)", "src": "subtitles/sample-en.vtt", "format": "vtt", "default": true },
+    { "lang": "en-srt", "label": "Sample · SRT format", "src": "subtitles/sample-srt.srt", "format": "srt" }
+  ],
+  "resolvers": {
+    "ipfsGateways": ["https://{cid}.ipfs.dweb.link", "https://ipfs.io/ipfs/{cid}"],
+    "webtorrentTrackers": ["wss://tracker.openwebtorrent.com"]
+  },
+  "layout": { "split": 0.6, "mode": "split", "transition": "fade" },
+  "timing": [
     { "time": 0,     "slide": 1,  "transition": "cut",   "label": "01 Title" },
     { "time": 22,    "slide": 2,  "transition": "fade",  "label": "02 Speaker" },
     { "time": 70,    "slide": 3,  "transition": "slide", "label": "03 The Pattern" },
