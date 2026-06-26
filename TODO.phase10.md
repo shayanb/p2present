@@ -18,9 +18,11 @@ neon glow, lunarpunk energy, generous negative space.
 - [x] Update OG/meta
 - [x] Update `scripts/smoke.mjs` home-section assertions + new docs-hub section
 - [x] Verify: `npm test` (45+23 units) + `npm run smoke` (113/113, 0 console errors, assets 200, 390/780/1280)
-- [ ] Commit logically + push to main
-- [ ] Write `.phase10.done`
-- [ ] Telegram summary + URL
+- [x] Commit logically + push to main
+- [x] Write `.phase10.done`
+- [x] Telegram summary + URL
+
+**PHASE 10 COMPLETE.** ✅
 
 ## Result
 - Verified: units 68/68 (45 app + 23 service); smoke **113/113**; no same-origin console errors;
