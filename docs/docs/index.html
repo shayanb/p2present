@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#06070b" />
+  <title>p2present — Docs</title>
+  <meta name="description" content="p2present documentation hub: the manifest spec, the authoring guide, the JSON schema, and the Builder & Host tools." />
+  <link rel="canonical" href="https://ibeezhan.github.io/p2present/docs/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="p2present — Docs" />
+  <meta property="og:description" content="The manifest spec, authoring guide, JSON schema, and tooling for p2present." />
+  <meta property="og:url" content="https://ibeezhan.github.io/p2present/docs/" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>📚</text></svg>" />
+  <link rel="stylesheet" href="../home.css" />
+  <style>
+    /* docs-hub-only tweaks layered over the shared cinematic theme */
+    .docs-hero { padding: clamp(56px, 11vh, 110px) 0 8px; }
+    .docs-hero h1 { font-size: clamp(38px, 7vw, 68px); font-weight: 800; margin-top: 18px; }
+    .docs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .doc-card {
+      display: flex; flex-direction: column; gap: 8px; padding: 22px; border-radius: var(--radius);
+      border: 1px solid var(--line); background: linear-gradient(160deg, rgba(23,27,35,.6), rgba(10,12,17,.6));
+      color: var(--fg); transition: transform .25s var(--ease), border-color .25s; position: relative; overflow: hidden;
+    }
+    .doc-card:hover { transform: translateY(-4px); border-color: var(--line-2); text-decoration: none; }
+    .doc-card::after { content: ""; position: absolute; inset: 0 0 auto 0; height: 2px; background: var(--neon); transform: scaleX(0); transform-origin: left; transition: transform .4s var(--ease); }
+    .doc-card:hover::after { transform: scaleX(1); }
+    .doc-card .ico { font-size: 26px; }
+    .doc-card h3 { font-size: 18px; margin: 6px 0 2px; }
+    .doc-card p { margin: 0; color: var(--muted); font-size: 14px; }
+    .doc-card .arrow { margin-top: 10px; color: var(--cyan); font-size: 13px; }
+    .doc-section h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 800; margin-bottom: 22px; }
+    .back { color: var(--muted); font-size: 14px; }
+    @media (max-width: 860px) { .docs-grid { grid-template-columns: 1fr; } }
+    @media (min-width: 561px) and (max-width: 860px) { .docs-grid { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"><span class="blob"></span><span class="grain"></span></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <header class="top">
+    <a class="brand" href="../" aria-label="p2present home"><span class="logo">🎞️</span><span>p2present</span></a>
+    <nav>
+      <a class="hide-sm" href="../#showcase">Showcase</a>
+      <a class="hide-sm" href="../app/">Player</a>
+      <a href="https://github.com/ibeezhan/p2present" rel="noopener">GitHub</a>
+      <a class="cta" href="../app/?p=moav-pdf">▶ Load a demo</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="docs-hero">
+      <div class="wrap">
+        <a class="back" href="../">← Home</a>
+        <div class="kicker" style="color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-top:18px">Documentation</div>
+        <h1>The <span class="neon-text">spec</span>, the format, the tooling.</h1>
+        <p class="muted" style="max-width:60ch;font-size:18px;margin-top:14px">
+          A p2present talk is just files plus one small <code>p2present.json</code> manifest. Here's everything
+          that defines the format and the tools that write it for you.</p>
+      </div>
+    </section>
+
+    <!-- ===================== THE FORMAT ===================== -->
+    <section class="doc-section">
+      <div class="wrap">
+        <h2>The format</h2>
+        <div class="docs-grid">
+          <a class="doc-card" href="https://github.com/ibeezhan/p2present/blob/main/SPEC.md" rel="noopener">
+            <span class="ico">📐</span><h3>Manifest spec</h3>
+            <p>The full <code>p2present.json</code> reference — deck, video sources, timing cues, subtitles, signatures, and persistence.</p>
+            <span class="arrow">SPEC.md →</span>
+          </a>
+          <a class="doc-card" href="https://github.com/ibeezhan/p2present/blob/main/AUTHORING.md" rel="noopener">
+            <span class="ico">✍️</span><h3>Authoring guide</h3>
+            <p>Step-by-step: assemble slides + a recording, map slides to seconds, and ship a shareable link.</p>
+            <span class="arrow">AUTHORING.md →</span>
+          </a>
+          <a class="doc-card" href="../p2present.schema.json">
+            <span class="ico">🧬</span><h3>JSON Schema</h3>
+            <p>The machine-readable schema the Builder validates against. Wire it into your editor for autocompletion.</p>
+            <span class="arrow">p2present.schema.json →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== TOOLS ===================== -->
+    <section class="doc-section">
+      <div class="wrap">
+        <h2>Tools</h2>
+        <div class="docs-grid">
+          <a class="doc-card" href="../builder/">
+            <span class="ico">🛠</span><h3>Visual Builder</h3>
+            <p>Build a manifest with a live preview and schema validation — no hand-editing JSON required.</p>
+            <span class="arrow">Open the Builder →</span>
+          </a>
+          <a class="doc-card" href="../host/">
+            <span class="ico">📤</span><h3>Host assets</h3>
+            <p>Push your slides and video to a hosting/persistence provider and get back content URLs.</p>
+            <span class="arrow">Open Host →</span>
+          </a>
+          <a class="doc-card" href="../app/">
+            <span class="ico">▶️</span><h3>The player</h3>
+            <p>Open any manifest in the player — paste a URL, a service id, or a deep-link to an exact moment.</p>
+            <span class="arrow">Open the player →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== DEEPER ===================== -->
+    <section class="doc-section">
+      <div class="wrap">
+        <h2>Going deeper</h2>
+        <div class="docs-grid">
+          <a class="doc-card" href="https://github.com/ibeezhan/p2present#readme" rel="noopener">
+            <span class="ico">📚</span><h3>README</h3>
+            <p>Project overview, architecture, and how to fork &amp; self-host on your own domain.</p>
+            <span class="arrow">README →</span>
+          </a>
+          <a class="doc-card" href="https://github.com/ibeezhan/p2present/blob/main/HOSTING.md" rel="noopener">
+            <span class="ico">🌐</span><h3>Hosting guide</h3>
+            <p>Hosting your assets across URLs, IPFS, WebTorrent, and pay-once persistence providers.</p>
+            <span class="arrow">HOSTING.md →</span>
+          </a>
+          <a class="doc-card" href="https://github.com/ibeezhan/p2present/blob/main/SERVICE.md" rel="noopener">
+            <span class="ico">🔗</span><h3>Sharing service</h3>
+            <p>The optional pastebin-lite manifest service — paste a manifest, get a short shareable id back.</p>
+            <span class="arrow">SERVICE.md →</span>
+          </a>
+          <a class="doc-card" href="https://github.com/ibeezhan/p2present/blob/main/ROADMAP.md" rel="noopener">
+            <span class="ico">🗺</span><h3>Roadmap</h3>
+            <p>What's free forever vs. the optional paid persistence &amp; verified-registry pieces, and why.</p>
+            <span class="arrow">ROADMAP.md →</span>
+          </a>
+          <a class="doc-card" href="https://github.com/ibeezhan/p2present" rel="noopener">
+            <span class="ico">★</span><h3>Source</h3>
+            <p>The whole thing is MIT-licensed and dependency-light. Read it, fork it, send a PR.</p>
+            <span class="arrow">GitHub →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site">
+    <div class="wrap cols">
+      <span class="brand"><span class="logo" style="font-size:18px">🎞️</span><span>p2present</span></span>
+      <a href="../app/">Player</a>
+      <a href="../builder/">Builder</a>
+      <a href="../host/">Host assets</a>
+      <a href="../">Home</a>
+      <a href="https://github.com/ibeezhan/p2present" rel="noopener">GitHub</a>
+      <span class="spacer"></span>
+      <span class="muted">MIT licensed · open core</span>
+    </div>
+  </footer>
+</body>
+</html>
