@@ -18,7 +18,8 @@ let lenis = null;
 function initSmoothScroll() {
   if (reduceMotion || !window.Lenis) return;
   // Coarse pointers (touch) keep native momentum; smoothing the wheel is the win.
-  lenis = new window.Lenis({ lerp: 0.1, smoothWheel: true, syncTouch: false, anchors: true });
+  // Keep the lerp fairly direct so scroll-linked visuals don't feel late.
+  lenis = new window.Lenis({ lerp: 0.18, wheelMultiplier: 1.08, smoothWheel: true, syncTouch: false, anchors: true });
   function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
   requestAnimationFrame(raf);
   lenis.on('scroll', onScroll);
@@ -73,10 +74,13 @@ function applyStep(step) {
 
 function applySourceFlow(progress) {
   if (!sticky) return;
-  const start = 4 / STEPS.length;
-  flowIntensity = clamp((progress - start) / (1 - start), 0, 1);
+  // Start before the final layout band so the sources are already present as the
+  // user arrives there instead of popping in after the scroll has effectively ended.
+  const start = 0.56;
+  const end = 0.94;
+  flowIntensity = clamp((progress - start) / (end - start), 0, 1);
   sticky.style.setProperty('--flow', flowIntensity.toFixed(3));
-  sticky.classList.toggle('sourcing', flowIntensity > 0.02);
+  sticky.classList.toggle('sourcing', flowIntensity > 0.005);
 }
 
 function onScroll() {
@@ -276,7 +280,7 @@ function boot() {
   // prime the morph + keep it in sync on scroll/resize
   applyStep(computeStep());
   applySourceFlow(computeProgress());
-  if (!lenis) window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll, { passive: true });
 }
 

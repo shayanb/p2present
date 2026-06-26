@@ -254,7 +254,7 @@ footer.site .brand .logo { width: 24px; height: 24px; border-radius: 7px; }
 #showcase { position: relative; height: 560vh; }
 .showcase-sticky {
   --flow: 0;
-  position: sticky; top: 0; height: 100vh; height: 100svh;
+  position: sticky; top: 64px; height: calc(100vh - 64px); height: calc(100svh - 64px);
   display: grid; grid-template-rows: auto 1fr auto; align-items: center;
   padding: 18px 0 28px; overflow: hidden;
 }
@@ -357,11 +357,11 @@ footer.site .brand .logo { width: 24px; height: 24px; border-radius: 7px; }
 /* overlays the morph stage; ignites when JS adds .sourcing at the final phase.  */
 .sources-field {
   position: absolute; inset: 0; z-index: 4; pointer-events: none;
-  opacity: 0; transition: opacity .6s var(--ease);
+  opacity: 0; transition: opacity .35s var(--ease);
 }
-.showcase-sticky.sourcing .sources-field { opacity: calc(.18 + (.82 * var(--flow))); }
+.showcase-sticky.sourcing .sources-field { opacity: calc(.5 + (.5 * var(--flow))); }
 /* shrink the player to make room for the incoming sources */
-.showcase-sticky.sourcing .morph { transform: scale(calc(1 - (.28 * var(--flow)))); }
+.showcase-sticky.sourcing .morph { transform: translateY(calc(-10vh * var(--flow))) scale(calc(1 - (.24 * var(--flow)))); }
 /* fade the layout legend out of the way at the source climax */
 .showcase-sticky.sourcing .morph-caps { opacity: calc(1 - (.8 * var(--flow))); transition: opacity .5s var(--ease); }
 
@@ -369,7 +369,7 @@ footer.site .brand .logo { width: 24px; height: 24px; border-radius: 7px; }
 .sources-field .streams { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .sources-field .streams path {
   fill: none; stroke: url(#streamGrad); stroke-width: .9; stroke-linecap: round;
-  stroke-dasharray: 4 8; opacity: calc(.18 + (.72 * var(--flow)));
+  stroke-dasharray: 4 8; opacity: calc(.08 + (.82 * var(--flow)));
   filter: drop-shadow(0 0 calc(2px + (6px * var(--flow))) rgba(124,107,255,.72));
   animation: streamFlow calc(1.25s - (.45s * var(--flow))) linear infinite;
 }
@@ -381,13 +381,14 @@ footer.site .brand .logo { width: 24px; height: 24px; border-radius: 7px; }
 
 /* the source nodes themselves — glowing orbs that pop in around the player */
 .src-node {
-  position: absolute; left: var(--x); top: var(--y); transform: translate(-50%, -50%) scale(.6);
+  --rise: 12vh;
+  position: absolute; left: var(--x); top: var(--y); transform: translate(-50%, -50%) scale(.9);
   display: flex; flex-direction: column; align-items: center; gap: 7px;
-  opacity: 0; transition: opacity .5s var(--ease), transform .5s var(--ease);
+  opacity: 0; transition: opacity .32s var(--ease), transform .5s var(--ease);
 }
 .showcase-sticky.sourcing .src-node {
-  opacity: calc(.22 + (.78 * var(--flow)));
-  transform: translate(-50%, -50%) scale(calc(.72 + (.28 * var(--flow))));
+  opacity: calc(.78 + (.22 * var(--flow)));
+  transform: translate(-50%, calc(-50% - (var(--rise) * var(--flow)))) scale(calc(.94 + (.06 * var(--flow))));
 }
 .showcase-sticky.sourcing .src-node[data-src="mp4"]        { transition-delay: .06s; }
 .showcase-sticky.sourcing .src-node[data-src="ipfs"]       { transition-delay: .12s; }
@@ -396,7 +397,8 @@ footer.site .brand .logo { width: 24px; height: 24px; border-radius: 7px; }
 .src-node .orb {
   display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; font-size: 22px;
   background: radial-gradient(circle at 35% 30%, rgba(124,107,255,.35), rgba(10,12,17,.95));
-  border: 1px solid var(--line-2); box-shadow: 0 0 26px rgba(124,107,255,.5), 0 8px 24px rgba(0,0,0,.5);
+  border: 1px solid rgba(255,255,255, calc(.22 - (.16 * var(--flow))));
+  box-shadow: 0 0 26px rgba(124,107,255,.5), 0 8px 24px rgba(0,0,0,.5);
   animation: orbFloat 4s ease-in-out infinite;
 }
 .src-node[data-src="mp4"]        .orb { animation-delay: -.8s; }
@@ -406,7 +408,11 @@ footer.site .brand .logo { width: 24px; height: 24px; border-radius: 7px; }
 @keyframes orbFloat { 0%,100%{ transform: translateY(0); box-shadow: 0 0 26px rgba(79,209,197,.45), 0 8px 24px rgba(0,0,0,.5); } 50%{ transform: translateY(-6px); box-shadow: 0 0 34px rgba(255,92,240,.55), 0 8px 24px rgba(0,0,0,.5); } }
 .src-node b {
   font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--fg);
-  background: rgba(6,7,11,.66); padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap;
+  background: rgba(6,7,11, calc(.84 - (.22 * var(--flow))));
+  padding: 3px 9px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255, calc(.2 - (.1 * var(--flow))));
+  box-shadow: 0 10px 24px rgba(0,0,0, calc(.3 - (.1 * var(--flow))));
+  white-space: nowrap;
 }
 
 /* captions row beneath the mock — one lights up per step */
@@ -590,15 +596,15 @@ footer.site .spacer { flex: 1; }
   .beat { padding: 9px 13px 9px 10px; font-size: 14px; }
   .beats .flow { width: 20px; }
   /* tighter constellation so it fits the phone stage */
-  .showcase-sticky.sourcing .morph { transform: scale(.64); }
+  .showcase-sticky.sourcing .morph { transform: translateY(calc(-14vh * var(--flow))) scale(calc(1 - (.34 * var(--flow)))); }
   .src-node .orb { width: 40px; height: 40px; font-size: 17px; }
   .src-node b { font-size: 10px; padding: 2px 7px; }
-  /* pull the edge nodes inward so their labels don't kiss the frame
-     (override the inline --x/--y, which otherwise win on specificity) */
-  .src-node[data-src="youtube"]    { --x: 22% !important; --y: 24% !important; }
-  .src-node[data-src="mp4"]        { --x: 78% !important; --y: 24% !important; }
-  .src-node[data-src="ipfs"]       { --x: 17% !important; --y: 55% !important; }
-  .src-node[data-src="webtorrent"] { --x: 83% !important; --y: 55% !important; }
+  /* start scattered below the mock, then rise into the stream path */
+  .src-node[data-src="youtube"]    { --x: 21% !important; --y: 74% !important; --rise: 7vh !important; }
+  .src-node[data-src="mp4"]        { --x: 73% !important; --y: 73% !important; --rise: 7vh !important; }
+  .src-node[data-src="ipfs"]       { --x: 23% !important; --y: 88% !important; --rise: 9vh !important; }
+  .src-node[data-src="webtorrent"] { --x: 78% !important; --y: 88% !important; --rise: 9vh !important; }
+  .src-node[data-src="arweave"]    { --x: 50% !important; --y: 97% !important; --rise: 10vh !important; }
   /* shorter pinned track on phones — less scrolling through all five phases */
   #showcase { height: 440vh; }
 }
