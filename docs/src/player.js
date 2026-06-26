@@ -69,6 +69,9 @@ export class Player {
     stage.append(deckPane, divider, videoPane);
     const controls = el('div', 'p2-controls');
     this.root.append(stage, controls);
+    // Subtle brand watermark in the stage corner — opaque mark, links home, and
+    // tucked clear of the controls bar and centered captions.
+    stage.appendChild(brandWatermark());
     this.stage = stage;
     this.deckPane = deckPane;
     this.videoPane = videoPane;
@@ -771,6 +774,17 @@ function pipHandle(text) {
   return n;
 }
 function spacer() { return el('span', 'p2-spacer'); }
+function brandWatermark() {
+  // Path is relative to the document (/app/ or /builder/), both one level under /brand.
+  const a = el('a', 'p2-watermark');
+  a.href = '../'; a.target = '_blank'; a.rel = 'noopener';
+  a.title = 'Made with p2present'; a.setAttribute('aria-label', 'p2present home');
+  const img = el('img');
+  img.src = '../brand/watermark-160.png'; img.alt = 'p2present';
+  img.width = 88; img.height = 63; img.draggable = false; img.loading = 'lazy';
+  a.appendChild(img);
+  return a;
+}
 function button(text, title, onClick) {
   const b = el('button', 'p2-btn');
   b.type = 'button'; b.textContent = text; b.title = title; b.setAttribute('aria-label', title);
