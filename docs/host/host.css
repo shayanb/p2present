@@ -40,11 +40,25 @@
 
 .p2-status-line { font-size: 13px; color: var(--muted); margin: 8px 0; min-height: 1em; }
 .p2-status-line.is-error { color: var(--error); }
+/* expected, actionable guidance (e.g. "Make permanent" needs payment wiring) */
+.p2-status-line.is-note {
+  color: var(--fg); background: var(--panel-2);
+  border: 1px solid var(--accent-dim); border-left: 3px solid var(--accent);
+  border-radius: 6px; padding: 8px 10px; line-height: 1.5;
+}
+
+/* permanent action (Arweave "Make permanent") stands out from a plain upload */
+.p2-primary.is-permanent { border-color: var(--accent); color: var(--accent); }
+
+.p2-result-head { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 2px; }
+.p2-tag-perm { background: var(--accent); color: var(--bg); }
 
 .p2-result {
   margin-top: 10px; background: var(--panel-2); border: 1px solid var(--accent-dim);
   border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;
 }
+/* a class display:flex beats the UA [hidden] rule — restore hiding explicitly */
+.p2-result[hidden] { display: none; }
 .p2-result-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .p2-result-label { color: var(--muted); font-size: 12px; flex: 0 0 130px; }
 .p2-result-val {

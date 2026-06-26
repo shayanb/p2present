@@ -19,7 +19,9 @@
 //   - scrubber thumbnail preview (PDF page render) appears on hover
 //   - deep-link hash (#t=…&slide=…) opens at the right time/slide
 //   - builder (/builder/): mounts, flags invalid, validates the demo, exports
-//   - host helper (/host/): loads, IPFS pin works (Pinata mocked), WT UI present
+//   - host helper (/host/): pluggable persistence providers — picker has all 4,
+//     Arweave default + "Make permanent" payment-stub note, IPFS pin (Pinata
+//     mocked) → ipfs:// ref + builder handoff, seedbox trackers prefilled
 //   - responsive widths 390 / 780 / 1280 (player + builder + host)
 // and saves screenshots to docs/screenshots/.
 //
@@ -743,7 +745,7 @@ async function main() {
       await p.close();
     }
 
-    // === 8. Host helper: loads; IPFS pin works (mocked); WT UI present ===
+    // === 8. Host helper: pluggable persistence providers ===
     {
       const p = await newPage(context);
       // Mock the Pinata pin endpoint so we never hit the network / need a token.
@@ -752,25 +754,45 @@ async function main() {
         body: JSON.stringify({ IpfsHash: 'bafkreitestcidmock0000000000000000000000000000000000000000' }),
       }));
       await p.goto(`${ORIGIN}/host/`, { waitUntil: 'load' });
-      await p.waitForSelector('#ipfs-provider', { timeout: 15000 });
-      ok('host: page loads (IPFS + WebTorrent cards)', (await p.$$('.p2-card')).length >= 2);
-      ok('host: WebTorrent trackers prefilled', (await p.inputValue('#wt-trackers')).includes('wss://'));
-      // Upload with no token → friendly prompt (no crash).
-      await p.setInputFiles('#ipfs-file', { name: 'note.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') });
-      await p.click('#ipfs-upload');
+      await p.waitForSelector('#persist-provider', { timeout: 15000 });
+      const providers = await p.evaluate(() =>
+        [...document.querySelectorAll('#persist-provider option')].map((o) => o.value));
+      ok('host: 4 persistence providers in the picker', providers.length === 4 && providers.includes('arweave'), providers.join(','));
+      ok('host: Arweave is the default + "Make permanent" action',
+        (await p.inputValue('#persist-provider')) === 'arweave' && /permanent/i.test(await p.textContent('#persist-action')));
+
+      // Arweave with no endpoint → the payment hook surfaces a documented note (no crash).
+      await p.setInputFiles('#persist-file', { name: 'note.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') });
+      await p.click('#persist-action');
+      const payNote = await p.waitForFunction(
+        () => document.getElementById('persist-status')?.classList.contains('is-note'),
+        { timeout: 8000 }).then(() => true).catch(() => false);
+      ok('host: Arweave "Make permanent" stub shows the payment-wiring note', payNote,
+        await p.textContent('#persist-status'));
+
+      // Switch to the IPFS pinning provider → token field renders.
+      await p.selectOption('#persist-provider', 'pinning');
+      await p.waitForSelector('#pf-token', { timeout: 5000 });
+      await p.setInputFiles('#persist-file', { name: 'note.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') });
+      await p.click('#persist-action');
       await p.waitForTimeout(300);
-      ok('host: upload without token prompts for one', /token/i.test(await p.textContent('#ipfs-status')));
-      // With a (fake) token → mocked CID shown + handoff persisted.
-      await p.fill('#ipfs-token', 'FAKEJWT');
-      await p.click('#ipfs-upload');
+      ok('host: pinning upload without a token prompts for one', /token/i.test(await p.textContent('#persist-status')));
+      await p.fill('#pf-token', 'FAKEJWT');
+      await p.click('#persist-action');
       const pinned = await p.waitForFunction(
-        () => !document.getElementById('ipfs-result').hidden,
+        () => !document.getElementById('persist-result').hidden,
         { timeout: 10000 }).then(() => true).catch(() => false);
-      ok('host: IPFS pin (mock) shows a CID result', pinned);
-      const ref = await p.evaluate(() => document.querySelector('#ipfs-result .is-ref')?.textContent || '');
+      ok('host: IPFS pin (mock) shows a result', pinned);
+      const ref = await p.evaluate(() => document.querySelector('#persist-result .is-ref')?.textContent || '');
       ok('host: result is an ipfs:// reference', ref.startsWith('ipfs://bafk'), ref);
       const handoff = await p.evaluate(() => { try { return JSON.parse(localStorage.getItem('p2present:hosted'))?.[0]?.ref || ''; } catch { return ''; } });
       ok('host: reference saved for the builder handoff', handoff.startsWith('ipfs://'));
+
+      // Seedbox provider → WebTorrent trackers prefilled (UI present; no live seed).
+      await p.selectOption('#persist-provider', 'seedbox');
+      await p.waitForSelector('#pf-trackers', { timeout: 5000 });
+      ok('host: seedbox trackers prefilled', (await p.inputValue('#pf-trackers')).includes('wss://'));
+      await p.selectOption('#persist-provider', 'arweave');   // reset for screenshots
       for (const w of [1280, 780, 390]) {
         await p.setViewportSize({ width: w, height: 800 });
         await p.waitForTimeout(250);

@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0d0f12" />
-  <title>p2present — host your assets (IPFS / WebTorrent)</title>
-  <meta name="description" content="Get presentation assets onto P2P: pin a file to IPFS with your own token, or create + seed a WebTorrent in the browser. Produces ipfs:// and magnet: references for a p2present.json manifest." />
+  <title>p2present — host your assets (Arweave / IPFS / WebTorrent / S3)</title>
+  <meta name="description" content="Put presentation assets onto permanent or P2P storage via pluggable providers: Arweave (pay-once permanent), IPFS pinning, WebTorrent seeding, or S3/https. Produces ar:// ipfs:// magnet: and https references for a p2present.json manifest." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>📤</text></svg>" />
   <link rel="stylesheet" href="../app.css" />
   <link rel="stylesheet" href="host.css" />
@@ -25,60 +25,40 @@
 
   <main class="p2-host">
     <p class="p2-lead">
-      Put a presentation asset (video, deck HTML/PDF, subtitle file…) onto the decentralized web,
-      then paste the resulting <code>ipfs://</code> or <code>magnet:</code> reference into a source in the
-      <a href="../builder/">Builder</a>. Everything here runs in your browser — no p2present server sees your files or tokens.
-      See the <a href="https://github.com/ibeezhan/p2present/blob/main/HOSTING.md">hosting guide</a> for the full story (plain URLs, CLI seeding, etc.).
+      Put a presentation asset (video, deck HTML/PDF, subtitle file…) onto storage,
+      then paste the resulting <code>ar://</code> / <code>ipfs://</code> / <code>magnet:</code> / <code>https</code>
+      reference into a source in the <a href="../builder/">Builder</a>. Pick a <strong>persistence provider</strong> below —
+      everything runs in your browser, so no p2present server sees your files or tokens.
+      See the <a href="https://github.com/ibeezhan/p2present/blob/main/HOSTING.md">hosting guide</a> for the full story.
     </p>
 
-    <div class="p2-host-grid">
-      <!-- IPFS -->
-      <section class="p2-card" aria-label="Pin to IPFS">
-        <h2>📌 Pin to IPFS</h2>
-        <p class="p2-hint">Upload a file to a pinning provider <em>you</em> configure with your own API token. Returns a CID and a ready <code>ipfs://</code> reference.</p>
+    <section class="p2-card" aria-label="Host an asset">
+      <h2>📤 Host an asset</h2>
 
-        <label class="p2-field"><span>Provider</span>
-          <select id="ipfs-provider">
-            <option value="pinata">Pinata (JWT)</option>
-            <option value="web3storage">web3.storage (legacy API token)</option>
-          </select>
-        </label>
+      <label class="p2-field"><span>Persistence provider</span>
+        <select id="persist-provider"></select>
+      </label>
+      <p class="p2-hint" id="persist-blurb"></p>
+      <p class="p2-note" id="persist-note"></p>
 
-        <label class="p2-field"><span id="token-label">Pinata JWT</span>
-          <input id="ipfs-token" type="password" autocomplete="off" spellcheck="false" placeholder="paste your token" />
-        </label>
-        <div class="p2-row-actions">
-          <button type="button" class="p2-load" id="token-save">Save token</button>
-          <button type="button" class="p2-load" id="token-clear">Clear token</button>
-          <span class="p2-hint" id="token-state"></span>
-        </div>
-        <p class="p2-note" id="token-note"></p>
+      <!-- provider-specific config fields (tokens / endpoints / trackers) -->
+      <div id="persist-fields"></div>
+      <div class="p2-row-actions">
+        <button type="button" class="p2-load" id="config-save">Save config</button>
+        <button type="button" class="p2-load" id="config-clear">Clear config</button>
+        <span class="p2-hint" id="config-state"></span>
+      </div>
 
-        <label class="p2-field"><span>File</span>
-          <input id="ipfs-file" type="file" />
-        </label>
-        <button type="button" class="p2-load p2-primary" id="ipfs-upload">⬆ Upload &amp; pin</button>
-        <p class="p2-status-line" id="ipfs-status" role="status" aria-live="polite"></p>
-        <div class="p2-result" id="ipfs-result" hidden></div>
-      </section>
-
-      <!-- WebTorrent -->
-      <section class="p2-card" aria-label="Seed via WebTorrent">
-        <h2>🌐 Seed via WebTorrent</h2>
-        <p class="p2-hint">Create a torrent in the browser and seed it from this tab. Copy the magnet into a manifest. <strong>Seeding stops when you close this tab</strong> — for always-on seeding, use the CLI (see the guide).</p>
-
-        <label class="p2-field"><span>File</span>
-          <input id="wt-file" type="file" />
-        </label>
-        <label class="p2-field"><span>Trackers (wss://, one per line — optional)</span>
-          <textarea id="wt-trackers" rows="3" spellcheck="false"></textarea>
-        </label>
-        <button type="button" class="p2-load p2-primary" id="wt-seed">▶ Create &amp; seed</button>
-        <button type="button" class="p2-load" id="wt-stop" hidden>■ Stop seeding</button>
-        <p class="p2-status-line" id="wt-status" role="status" aria-live="polite"></p>
-        <div class="p2-result" id="wt-result" hidden></div>
-      </section>
-    </div>
+      <label class="p2-field"><span>File</span>
+        <input id="persist-file" type="file" />
+      </label>
+      <div class="p2-row-actions">
+        <button type="button" class="p2-load p2-primary" id="persist-action">Upload</button>
+        <button type="button" class="p2-load" id="persist-stop" hidden>■ Stop seeding</button>
+      </div>
+      <p class="p2-status-line" id="persist-status" role="status" aria-live="polite"></p>
+      <div class="p2-result" id="persist-result" hidden></div>
+    </section>
 
     <!-- hosted assets handoff -->
     <section class="p2-card" id="hosted-card" hidden>

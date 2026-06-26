@@ -1,161 +1,192 @@
-// host.js — the "host your assets" helper.
+// host.js — the "host your assets" helper, now driven by the pluggable
+// persistence-provider registry (docs/src/persist/). Pick a provider, supply the
+// config it needs (tokens/endpoints — kept ONLY in this browser), upload a file,
+// and get back a manifest reference (ar:// / ipfs:// / magnet: / https) you paste
+// into a source in the Builder. No p2present server sees your files or tokens.
 //
-// Two ways to get a file onto the decentralized web, both fully client-side:
-//   • IPFS  — pin via a provider the USER configures with their own API token
-//             (Pinata JWT, or the legacy web3.storage token). Token is entered
-//             in the UI, NEVER hardcoded, and stored only in localStorage.
-//   • WebTorrent — create + seed a torrent in this tab and surface the magnet.
-//
-// Both append a reference to a shared "hosted references" list (localStorage),
-// which the Builder reads so you can paste ipfs:// / magnet: straight into a
-// manifest source. No p2present server is involved at any point.
+//   • arweave (DEFAULT) — pay-once permanent; "Make permanent" routes through the
+//                         payment hook (Stripe / on-chain rent — stubbed here).
+//   • pinning           — IPFS pinning service (Pinata / web3.storage).
+//   • seedbox           — WebTorrent seed (in-tab + optional always-on seedbox).
+//   • s3                — S3 / presigned PUT → plain https.
 
+import {
+  persistProviders, listPersistProviders, DEFAULT_PERSIST_PROVIDER,
+  PaymentNotConfiguredError,
+} from '../src/persist/index.js';
 import { getWebTorrentClient, DEFAULT_WEBTORRENT_TRACKERS } from '../src/resolve.js';
 
 const $ = (id) => document.getElementById(id);
 const HOSTED_KEY = 'p2present:hosted';
-const tokenKey = (provider) => `p2present:token:${provider}`;
+const configKey = (id) => `p2present:persist:${id}`;
 
-// --- provider config --------------------------------------------------------
-
-const PROVIDERS = {
-  pinata: {
-    label: 'Pinata JWT',
-    note: 'Create a JWT at app.pinata.cloud → API Keys. It is stored ONLY in this browser (localStorage) and sent directly to Pinata — never to p2present.',
-    async upload(file, token, onProgress) {
-      const fd = new FormData();
-      fd.append('file', file, file.name);
-      onProgress?.('Uploading to Pinata…');
-      const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
-      });
-      if (!res.ok) throw new Error(`Pinata HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
-      const j = await res.json();
-      if (!j.IpfsHash) throw new Error('Pinata response had no IpfsHash.');
-      return j.IpfsHash;
-    },
-  },
-  web3storage: {
-    label: 'web3.storage API token',
-    note: 'Legacy web3.storage API token (api.web3.storage). Stored ONLY in this browser and sent directly to web3.storage. For the newer Storacha/w3up flow, use the w3 CLI (see the hosting guide).',
-    async upload(file, token, onProgress) {
-      onProgress?.('Uploading to web3.storage…');
-      const res = await fetch('https://api.web3.storage/upload', {
-        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: file,
-      });
-      if (!res.ok) throw new Error(`web3.storage HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
-      const j = await res.json();
-      if (!j.cid) throw new Error('web3.storage response had no cid.');
-      return j.cid;
-    },
-  },
+// Shared injectable deps every provider gets (browser flavours of put()'s needs).
+const DEPS = {
+  getWebTorrent: getWebTorrentClient,
+  get payments() { return (typeof window !== 'undefined' && window.__P2_PAYMENTS) || null; },
 };
 
-function currentProvider() { return $('ipfs-provider').value; }
+let lastTorrent = null;   // in-tab seed handle, so "Stop seeding" can destroy it
 
-function refreshProviderUI() {
-  const p = PROVIDERS[currentProvider()];
-  $('token-label').textContent = p.label;
-  $('token-note').textContent = p.note;
-  const saved = lsGet(tokenKey(currentProvider()));
-  $('ipfs-token').value = saved || '';
-  $('token-state').textContent = saved ? 'Token saved in this browser.' : 'No token saved.';
+// --- provider config (localStorage, per provider) ---------------------------
+
+function loadConfig(id) {
+  try { return JSON.parse(localStorage.getItem(configKey(id))) || {}; } catch { return {}; }
+}
+function saveConfig(id, cfg) {
+  try { localStorage.setItem(configKey(id), JSON.stringify(cfg)); } catch {}
+}
+function currentId() { return $('persist-provider').value; }
+function currentClass() { return persistProviders.get(currentId()); }
+
+// --- UI: provider picker + dynamic fields -----------------------------------
+
+function buildProviderOptions() {
+  const sel = $('persist-provider');
+  sel.innerHTML = '';
+  for (const P of listPersistProviders()) {
+    const o = document.createElement('option');
+    o.value = P.id;
+    o.textContent = P.label + (P.permanent ? '  ·  ✦ permanent' : '');
+    sel.appendChild(o);
+  }
+  sel.value = DEFAULT_PERSIST_PROVIDER;
 }
 
-// --- IPFS upload ------------------------------------------------------------
+function renderProvider() {
+  const P = currentClass();
+  $('persist-blurb').textContent = P.blurb || '';
+  $('persist-note').textContent = P.note || '';
+  $('persist-action').textContent = P.action || 'Upload';
+  $('persist-action').classList.toggle('is-permanent', !!P.permanent);
+  $('persist-stop').hidden = true;
+  $('persist-result').hidden = true;
+  $('persist-status').textContent = '';
+  $('persist-status').className = 'p2-status-line';
 
-async function uploadToIpfs() {
-  const provider = currentProvider();
-  const token = $('ipfs-token').value.trim() || lsGet(tokenKey(provider));
-  const file = $('ipfs-file').files?.[0];
-  const status = $('ipfs-status');
+  const cfg = loadConfig(P.id);
+  const box = $('persist-fields');
+  box.innerHTML = '';
+  for (const f of P.fields) {
+    box.appendChild(fieldEl(f, cfg[f.key]));
+  }
+  // Seedbox: prefill trackers with the defaults when nothing saved yet.
+  if (P.id === 'seedbox') {
+    const t = $('pf-trackers');
+    if (t && !t.value) t.value = DEFAULT_WEBTORRENT_TRACKERS.join('\n');
+  }
+  $('config-state').textContent = Object.keys(cfg).length ? 'Config saved in this browser.' : '';
+}
+
+function fieldEl(f, value) {
+  const label = document.createElement('label');
+  label.className = 'p2-field';
+  const span = document.createElement('span');
+  span.textContent = f.label + (f.optional ? ' (optional)' : '');
+  label.appendChild(span);
+
+  let input;
+  if (f.type === 'select') {
+    input = document.createElement('select');
+    for (const opt of f.options || []) {
+      const o = document.createElement('option');
+      o.value = opt.value; o.textContent = opt.label;
+      input.appendChild(o);
+    }
+    input.value = value ?? f.default ?? (f.options?.[0]?.value || '');
+  } else if (f.type === 'textarea') {
+    input = document.createElement('textarea');
+    input.rows = 3; input.spellcheck = false;
+    input.value = value ?? f.default ?? '';
+  } else {
+    input = document.createElement('input');
+    input.type = f.type === 'password' ? 'password' : 'text';
+    input.autocomplete = 'off'; input.spellcheck = false;
+    if (f.placeholder) input.placeholder = f.placeholder;
+    input.value = value ?? f.default ?? '';
+  }
+  input.id = `pf-${f.key}`;
+  input.dataset.key = f.key;
+  label.appendChild(input);
+  return label;
+}
+
+function collectConfig() {
+  const cfg = {};
+  for (const el of $('persist-fields').querySelectorAll('[data-key]')) {
+    const v = (el.value ?? '').trim ? el.value.trim() : el.value;
+    if (v !== '') cfg[el.dataset.key] = v;
+  }
+  return cfg;
+}
+
+// --- upload -----------------------------------------------------------------
+
+async function doUpload() {
+  const P = currentClass();
+  const cfg = collectConfig();
+  const file = $('persist-file').files?.[0];
+  const status = $('persist-status');
   if (!file) { status.textContent = 'Choose a file first.'; return; }
-  if (!token) { status.textContent = `Enter your ${PROVIDERS[provider].label} above (your own token — never shared).`; return; }
-  $('ipfs-upload').disabled = true;
+
+  $('persist-action').disabled = true;
   status.className = 'p2-status-line';
+  status.textContent = 'Working…';
   try {
-    const cid = await PROVIDERS[provider].upload(file, token, (m) => { status.textContent = m; });
-    status.textContent = 'Pinned ✓';
-    showIpfsResult(cid, file.name);
-    addHosted({ kind: 'ipfs', ref: `ipfs://${cid}`, name: file.name });
+    const inst = new (persistProviders.get(P.id))(cfg, DEPS);
+    const result = await inst.put(file, { onProgress: (m) => { status.textContent = m; } });
+    status.textContent = P.permanent ? 'Stored permanently ✓' : 'Done ✓';
+    showResult(result);
+    addHosted({ kind: result.scheme, ref: result.ref, name: result.name || file.name });
+
+    // Seedbox keeps seeding in this tab — offer a stop button + peer count.
+    if (result.extra?.torrent) {
+      lastTorrent = result.extra.torrent;
+      $('persist-stop').hidden = false;
+    }
   } catch (err) {
-    status.className = 'p2-status-line is-error';
-    status.textContent = err.message || String(err);
+    if (err instanceof PaymentNotConfiguredError) {
+      // Expected, actionable guidance — not a failure of the app.
+      status.className = 'p2-status-line is-note';
+      status.textContent = err.message;
+    } else {
+      status.className = 'p2-status-line is-error';
+      status.textContent = err.message || String(err);
+    }
   } finally {
-    $('ipfs-upload').disabled = false;
+    $('persist-action').disabled = false;
   }
-}
-
-function showIpfsResult(cid, name) {
-  const ref = `ipfs://${cid}`;
-  const gateway = `https://${cid}.ipfs.dweb.link`;
-  const box = $('ipfs-result');
-  box.hidden = false;
-  box.innerHTML = '';
-  box.append(
-    resultRow('CID', cid),
-    resultRow('Manifest reference', ref, true),
-    linkRow('Gateway preview', gateway),
-  );
-}
-
-// --- WebTorrent seed --------------------------------------------------------
-
-let seedingTorrent = null;
-let wtClient = null;
-
-async function seedWebTorrent() {
-  const file = $('wt-file').files?.[0];
-  const status = $('wt-status');
-  if (!file) { status.textContent = 'Choose a file first.'; return; }
-  const trackers = $('wt-trackers').value.split('\n').map((s) => s.trim()).filter(Boolean);
-  $('wt-seed').disabled = true;
-  status.className = 'p2-status-line';
-  status.textContent = 'Loading WebTorrent…';
-  try {
-    wtClient = await getWebTorrentClient();
-    status.textContent = 'Hashing + announcing to trackers…';
-    const opts = trackers.length ? { announce: trackers } : {};
-    wtClient.seed(file, opts, (torrent) => {
-      seedingTorrent = torrent;
-      status.textContent = 'Seeding ✓ — keep this tab open.';
-      showWtResult(torrent, file.name);
-      addHosted({ kind: 'magnet', ref: torrent.magnetURI, name: file.name });
-      $('wt-stop').hidden = false;
-      torrent.on('wire', () => updateWtPeers(torrent));
-      updateWtPeers(torrent);
-    });
-  } catch (err) {
-    status.className = 'p2-status-line is-error';
-    status.textContent = err.message || String(err);
-    $('wt-seed').disabled = false;
-  }
-}
-
-function updateWtPeers(torrent) {
-  const el = document.getElementById('wt-peers');
-  if (el) el.textContent = `${torrent.numPeers} peer(s) connected`;
-}
-
-function showWtResult(torrent, name) {
-  const box = $('wt-result');
-  box.hidden = false;
-  box.innerHTML = '';
-  const peers = document.createElement('p');
-  peers.className = 'p2-hint'; peers.id = 'wt-peers'; peers.textContent = '0 peer(s) connected';
-  box.append(
-    resultRow('Manifest reference (magnet)', torrent.magnetURI, true),
-    peers,
-  );
 }
 
 function stopSeeding() {
-  try { seedingTorrent?.destroy(); } catch {}
-  seedingTorrent = null;
-  $('wt-stop').hidden = true;
-  $('wt-seed').disabled = false;
-  $('wt-status').textContent = 'Stopped seeding.';
-  $('wt-result').hidden = true;
+  try { lastTorrent?.destroy(); } catch {}
+  lastTorrent = null;
+  $('persist-stop').hidden = true;
+  $('persist-status').textContent = 'Stopped seeding.';
+}
+
+function showResult(r) {
+  const box = $('persist-result');
+  box.hidden = false;
+  box.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'p2-result-head';
+  head.innerHTML = `<span class="p2-tag">${escapeHtml(r.scheme)}</span>` +
+    (r.permanent ? '<span class="p2-tag p2-tag-perm">permanent ✦</span>' : '') +
+    (r.extra?.alwaysOn ? '<span class="p2-tag">always-on</span>' : '');
+  box.append(head, resultRow('Manifest reference', r.ref, true));
+  if (r.gateway) box.append(linkRow('Gateway preview', r.gateway));
+  if (r.scheme === 'magnet') {
+    const peers = document.createElement('p');
+    peers.className = 'p2-hint'; peers.id = 'wt-peers';
+    peers.textContent = '0 peer(s) connected';
+    box.append(peers);
+    if (r.extra?.torrent) {
+      const t = r.extra.torrent;
+      const upd = () => { const el = $('wt-peers'); if (el) el.textContent = `${t.numPeers} peer(s) connected`; };
+      t.on?.('wire', upd); upd();
+    }
+  }
 }
 
 // --- hosted references (handoff to builder) ---------------------------------
@@ -173,8 +204,7 @@ function addHosted(entry) {
 }
 function renderHosted() {
   const list = getHosted();
-  const card = $('hosted-card');
-  card.hidden = list.length === 0;
+  $('hosted-card').hidden = list.length === 0;
   const box = $('hosted-list');
   box.innerHTML = '';
   for (const e of list) {
@@ -182,7 +212,7 @@ function renderHosted() {
     row.className = 'p2-hosted-row';
     const meta = document.createElement('div');
     meta.className = 'p2-hosted-meta';
-    meta.innerHTML = `<span class="p2-tag">${e.kind}</span> <span class="p2-hosted-name">${escapeHtml(e.name || '')}</span>`;
+    meta.innerHTML = `<span class="p2-tag">${escapeHtml(e.kind)}</span> <span class="p2-hosted-name">${escapeHtml(e.name || '')}</span>`;
     const code = document.createElement('code');
     code.className = 'p2-hosted-ref'; code.textContent = e.ref;
     row.append(meta, code, copyButton(e.ref));
@@ -210,8 +240,7 @@ function linkRow(label, url) {
 }
 function copyButton(text) {
   const b = document.createElement('button');
-  b.type = 'button'; b.className = 'p2-load p2-copy'; b.textContent = '📋';
-  b.title = 'Copy';
+  b.type = 'button'; b.className = 'p2-load p2-copy'; b.textContent = '📋'; b.title = 'Copy';
   b.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(text); b.textContent = '✓'; setTimeout(() => (b.textContent = '📋'), 1200); }
     catch { b.textContent = '✗'; setTimeout(() => (b.textContent = '📋'), 1200); }
@@ -219,29 +248,26 @@ function copyButton(text) {
   return b;
 }
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 
 // --- wire up ----------------------------------------------------------------
 
 function init() {
-  $('wt-trackers').value = DEFAULT_WEBTORRENT_TRACKERS.join('\n');
-  $('ipfs-provider').addEventListener('change', refreshProviderUI);
-  refreshProviderUI();
+  buildProviderOptions();
+  $('persist-provider').addEventListener('change', renderProvider);
+  renderProvider();
 
-  $('token-save').addEventListener('click', () => {
-    const v = $('ipfs-token').value.trim();
-    try { v ? localStorage.setItem(tokenKey(currentProvider()), v) : localStorage.removeItem(tokenKey(currentProvider())); } catch {}
-    $('token-state').textContent = v ? 'Token saved in this browser.' : 'No token saved.';
+  $('config-save').addEventListener('click', () => {
+    saveConfig(currentId(), collectConfig());
+    $('config-state').textContent = 'Config saved in this browser.';
   });
-  $('token-clear').addEventListener('click', () => {
-    try { localStorage.removeItem(tokenKey(currentProvider())); } catch {}
-    $('ipfs-token').value = '';
-    $('token-state').textContent = 'Token cleared.';
+  $('config-clear').addEventListener('click', () => {
+    try { localStorage.removeItem(configKey(currentId())); } catch {}
+    renderProvider();
+    $('config-state').textContent = 'Config cleared.';
   });
 
-  $('ipfs-upload').addEventListener('click', uploadToIpfs);
-  $('wt-seed').addEventListener('click', seedWebTorrent);
-  $('wt-stop').addEventListener('click', stopSeeding);
+  $('persist-action').addEventListener('click', doUpload);
+  $('persist-stop').addEventListener('click', stopSeeding);
   $('hosted-clear').addEventListener('click', () => { try { localStorage.removeItem(HOSTED_KEY); } catch {} renderHosted(); });
 
   renderHosted();
