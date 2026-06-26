@@ -413,8 +413,10 @@ function renderHosted() {
   }
 }
 
-async function init() {
-  try { schema = await (await fetch('../p2present.schema.json')).json(); } catch { schema = null; }
+function init() {
+  // Bind everything synchronously FIRST so the controls work immediately — the
+  // schema is fetched in the background (don't await it before wiring handlers,
+  // or a fast click during that fetch is lost on a slow network).
   bindStatic();
   fillStatic(); renderAllLists(); updatePreview();
   renderHosted();
@@ -437,6 +439,12 @@ async function init() {
   $('act-open').addEventListener('click', openInPlayer);
   $('act-copy').addEventListener('click', copyJson);
   $('act-download').addEventListener('click', downloadJson);
+
+  // Load the schema in the background, then re-validate once it arrives.
+  fetch('../p2present.schema.json')
+    .then((r) => r.json())
+    .then((s) => { schema = s; updatePreview(); })
+    .catch(() => { schema = null; });
 }
 
 init();
