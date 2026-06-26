@@ -4,7 +4,10 @@ A presentation in p2present is described by a single JSON manifest. This documen
 is the canonical reference for the **v1.0** schema. A machine-readable JSON Schema
 lives at [`docs/p2present.schema.json`](docs/p2present.schema.json).
 
-The loader also accepts the **legacy v0** shape (see [Backward compatibility](#backward-compatibility)).
+Every source in a manifest — the manifest itself, the video, the deck, and
+assets — may be a plain **`https`** URL, an **`ipfs://`** CID, or a **`magnet:`**
+link. See [Source transports](#source-transports) and
+[Loading & sharing](#loading--sharing-query-args--base64).
 
 ---
 
@@ -49,7 +52,7 @@ The loader also accepts the **legacy v0** shape (see [Backward compatibility](#b
 
 | Field        | Type             | Required | Notes |
 |--------------|------------------|:--------:|-------|
-| `p2present`  | string           |    no    | Schema version. Use `"1.0"`. Its presence (or `video.sources` / `timing`) selects the v1 path. |
+| `p2present`  | string           |    no    | Schema version. Use `"1.0"`. |
 | `title`      | string           |    no    | Shown in the header and as the document title. Defaults to `"Untitled presentation"`. |
 | `meta`       | object           |    no    | Descriptive metadata — see [meta](#meta). |
 | `video`      | object           |  **yes** | The talk video — see [video](#video). |
@@ -92,17 +95,18 @@ fallback behind a peer-to-peer primary, etc.
 }
 ```
 
-| Provider     | Status        | `src` |
-|--------------|---------------|-------|
-| `youtube`    | ✅ implemented | video id, or a `watch?v=` / `youtu.be` / `embed` URL |
-| `mp4`        | ✅ implemented | URL to any browser-playable file (resolved if relative) |
-| `webtorrent` | 🚧 phase-2 stub | magnet URI — **throws and falls through** to the next source for now |
-| `ipfs`       | 🚧 phase-2 stub | CID or `ipfs://…` — **throws and falls through** for now |
+| Provider     | Status         | `src` |
+|--------------|----------------|-------|
+| `youtube`    | ✅ implemented  | video id, or a `watch?v=` / `youtu.be` / `embed` URL |
+| `mp4`        | ✅ implemented  | URL to any browser-playable file (resolved if relative) |
+| `webtorrent` | ✅ implemented  | `magnet:?xt=…` — streamed into `<video>` via `file.renderTo()` using `resolvers.webtorrentTrackers` |
+| `ipfs`       | ✅ implemented  | CID or `ipfs://…` — played through the first reachable `resolvers.ipfsGateways` gateway |
 
-- `video.poster` *(optional)* — poster image URL, used by the `mp4` provider.
-- The phase-2 stubs intentionally throw a clear error; because sources are a
-  fallback list, a manifest can list `webtorrent` **first** and `mp4` second and
-  it will simply use the mp4 today, then prefer WebTorrent once it ships.
+- `video.poster` *(optional)* — poster image URL, used by the `<video>`-backed providers.
+- Because `sources` is a fallback list, a manifest can list `webtorrent` **first**
+  and `mp4` second: the player streams from the swarm when peers are available and
+  **gracefully falls through** to the hosted mp4 if the torrent can't be reached
+  (no peers, blocked WSS, timeout). The same applies to `ipfs` → `mp4`.
 
 ---
 
@@ -128,6 +132,10 @@ The slide deck. `sources` is likewise an **ordered fallback list** of URLs.
 
 - `deck.slideCount` *(optional)* — total slides, used for the counter when the
   deck engine can't report its own count.
+- **P2P decks.** A deck `src` may also be `ipfs://…` (expanded to the gateway
+  fallback list at load) or a `magnet:` link (the `.html` / `.pdf` is fetched
+  from the swarm and shown from a Blob URL). So the deck — not just the video —
+  can live entirely on the decentralized web.
 
 ---
 
@@ -196,9 +204,9 @@ lets the viewer pick a language or turn captions off.
 
 ### resolvers
 
-Override the default networks the phase-2 providers will consume. Stored on the
-manifest and passed to each video provider (today only used once WebTorrent /
-IPFS ship).
+Override the default networks the decentralized providers consume. Stored on the
+manifest and passed to the `ipfs` / `webtorrent` video providers, the P2P deck
+loader, and any `ipfs://` asset resolution.
 
 ```json
 "resolvers": {
@@ -242,44 +250,58 @@ Fullscreen is the `⛶` button or the `f` key.
 
 ---
 
-## Backward compatibility
+## Source transports
 
-The loader still accepts the original **v0** manifest. These are equivalent:
+A *source* is any string p2present is asked to fetch — the manifest, the video,
+the deck, subtitles, the poster, an external timing file. Three transports are
+recognised, anywhere a `src` is accepted:
 
-<table>
-<tr><th>v0 (legacy)</th><th>v1.0</th></tr>
-<tr><td>
+| Transport  | Form | Resolution |
+|------------|------|------------|
+| **https**  | `https://host/path` (or a path relative to the manifest) | fetched directly; relative paths resolve against the manifest's URL |
+| **ipfs**   | `ipfs://<cid>[/path]` or a bare `Qm…` / `bafy…` CID | expanded against `resolvers.ipfsGateways` (`{cid}` placeholder, or `…/ipfs/<cid>`), tried in order until one responds |
+| **magnet** | `magnet:?xt=urn:btih:…` | added to the WebTorrent swarm with `resolvers.webtorrentTrackers`; the matching file is streamed (`<video>`) or read into a Blob URL (deck / manifest) |
 
-```json
-{
-  "title": "My Talk",
-  "video": { "provider": "youtube", "src": "ID" },
-  "deck":  { "type": "html", "src": "slides/index.html" },
-  "sync":  [ { "time": 0, "slide": 1 } ]
-}
+Bare tokens that are neither a path nor a CID (e.g. a YouTube id) are left
+verbatim for the provider.
+
+> **Self-hosting needs no gateway.** If every `src` is a plain `https` URL on
+> your own server, p2present never touches a public IPFS gateway or tracker —
+> there is no hard dependency on any third party being up. ipfs/magnet are opt-in
+> per source, and always degrade to the next `sources[]` entry on failure.
+
+---
+
+## Loading & sharing (query args & base64)
+
+The resolver host (`docs/index.html`) decides what to load from the URL query —
+**first match wins**:
+
+| Query | Meaning |
+|-------|---------|
+| `?src=<base64>`   | base64-decoded value is **either** an inline `p2present.json` **or** a source URL/CID/magnet (auto-detected by a leading `{`). The compact, self-contained share format. |
+| `?manifest=<url>` | load a `p2present.json` from that source — any transport (`https` / `ipfs://` / `magnet:`). |
+| `?p=<name>`       | a bundled local manifest shipped in the fork at `content/<name>/manifest.json` (name limited to `[\w.-]`). |
+| *(none)*          | the bundled demo (`content/demo/manifest.json`). |
+
+The base64 is UTF-8 safe (`btoa(unescape(encodeURIComponent(str)))`) and tolerates
+the URL-safe alphabet (`-`/`_`).
+
+**Share-link scheme.** The header's **🔗 Share** button base64-encodes the current
+presentation's source and writes a self-contained link of the form:
+
+```
+https://<host>/<path>?src=<base64-of-the-current-source>
 ```
 
-</td><td>
+It is copied to the clipboard (and the address bar is updated). Examples:
 
-```json
-{
-  "p2present": "1.0",
-  "title": "My Talk",
-  "video": { "sources": [ { "provider": "youtube", "src": "ID" } ] },
-  "deck":  { "type": "html", "sources": [ { "src": "slides/index.html" } ] },
-  "timing": [ { "time": 0, "slide": 1 } ]
-}
 ```
+# share an https-hosted talk
+…/p2present/?src=aHR0cHM6Ly9leGFtcGxlLmNvbS90YWxrL3AycHJlc2VudC5qc29u
 
-</td></tr>
-</table>
-
-Normalisation rules for v0:
-
-- `video.provider` + `video.src` → `video.sources: [{ provider, src }]`.
-- `deck.src` → `deck.sources: [{ src }]`.
-- `sync` → `timing` (same cue shape).
-- Missing `subtitles` / `resolvers` / `layout` / `meta` get defaults.
+# the decoded value can equally be  ipfs://bafy…/p2present.json  or  magnet:?xt=…
+```
 
 ---
 

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://ibeezhan.github.io/p2present/p2present.schema.json",
   "title": "p2present presentation manifest",
-  "description": "Schema for a p2present.json v1.0 manifest. See SPEC.md for prose + examples. The legacy v0 shape (video.provider/video.src/deck.src/sync) is still accepted by the loader for backward compatibility but is intentionally not described here.",
+  "description": "Schema for a p2present.json v1.0 manifest. See SPEC.md for prose + examples. Every src (video/deck/asset) may be an https URL, an ipfs:// CID, or a magnet: link.",
   "type": "object",
   "required": ["video", "deck"],
   "properties": {
@@ -37,7 +37,7 @@
               "provider": {
                 "type": "string",
                 "enum": ["youtube", "mp4", "webtorrent", "ipfs"],
-                "description": "youtube + mp4 are implemented; webtorrent + ipfs are phase-2 stubs that gracefully fall through to the next source."
+                "description": "youtube (iframe), mp4 (HTML5 video), webtorrent (magnet streamed via file.renderTo), and ipfs (gateway-resolved CID). Sources are an ordered fallback list, so a failed p2p source falls through to the next."
               },
               "src": {
                 "type": "string",
