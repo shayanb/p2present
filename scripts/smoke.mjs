@@ -209,23 +209,63 @@ async function main() {
   await context.addInitScript(() => { window.__P2_SERVICE_BASE = location.origin; window.__P2_ENS = false; });
 
   try {
-    // === 0. Landing page (/) — hero, sections, CTA, redirect, responsive ===
+    // === 0. Landing page (/) — cinematic redesign: hero, scroll-morph showcase,
+    //        sources, kept-alive teaser, demo picker, redirect, responsive ===
     {
       const p = await newPage(context);
       const homeAssets = {};
       p.on('response', (r) => { const u = r.url(); if (u.startsWith(ORIGIN)) homeAssets[u.replace(ORIGIN, '')] = r.status(); });
       await p.goto(`${ORIGIN}/`, { waitUntil: 'load' });
-      ok('home: hero renders the brand name', /p2present/i.test(await p.textContent('.hero h1')));
+      ok('home: hero renders the brand name', /p2present/i.test(await p.textContent('.brand')));
+      const h1 = await p.textContent('.hero h1');
       const tagline = await p.textContent('.hero .tagline');
-      ok('home: one-liner present', /play themselves/i.test(tagline) && /peer-to-peer/i.test(tagline), tagline);
+      ok('home: one-liner present', /play themselves/i.test(h1) && /peer-to-peer/i.test(tagline), `${h1.trim()} | ${tagline.trim()}`);
       const cta = await p.getAttribute('.hero .btn-primary', 'href');
       ok('home: CTA deep-links into the player demo', /^app\/\?p=moav-pdf$/.test(cta || ''), String(cta));
-      ok('home: how-it-works has 3 steps', (await p.$$('#how .step')).length === 3);
-      ok('home: features grid present', (await p.$$('#features .feat')).length >= 6, String((await p.$$('#features .feat')).length));
-      ok('home: hosted+registry has 3 plan cards', (await p.$$('#roadmap .plan-card')).length === 3);
-      const tags = await p.evaluate(() => [...document.querySelectorAll('#roadmap .tag')].map((t) => t.textContent.trim().toLowerCase()));
-      ok('home: roadmap framing (coming / roadmap tags)', tags.filter((t) => t === 'coming').length === 2 && tags.includes('roadmap'), tags.join(','));
-      ok('home: links to ROADMAP + repo + builder', (await p.$$('a[href*="ROADMAP.md"]')).length >= 1 && (await p.$$('a[href*="github.com/ibeezhan/p2present"]')).length >= 1 && (await p.$$('a[href="builder/"]')).length >= 1);
+
+      // --- the scroll-morph centerpiece ---
+      ok('home: scroll-morph mock present', await p.$('.morph[data-step]'));
+      ok('home: showcase morphs through 4 layout modes', (await p.$$('.morph-cap')).length === 4, String((await p.$$('.morph-cap')).length));
+      // walk the pinned track and confirm the mock morphs split(0) → PiP(3).
+      // (Smooth-scroll lags a single jump, so step through and collect states.)
+      const stepStart = await p.getAttribute('.morph', 'data-step');
+      const seen = new Set([stepStart]);
+      for (let f = 0; f <= 1.0001; f += 0.1) {
+        await p.evaluate((frac) => { const s = document.getElementById('showcase'); window.scrollTo(0, s.offsetTop + (s.offsetHeight - window.innerHeight) * frac); }, f);
+        await p.waitForTimeout(120);
+        seen.add(await p.getAttribute('.morph', 'data-step'));
+      }
+      // overshoot past the pin end and let smooth-scroll settle so the final mode (PiP) registers
+      await p.evaluate(() => { const s = document.getElementById('showcase'); window.scrollTo(0, s.offsetTop + s.offsetHeight); });
+      await p.waitForTimeout(600);
+      seen.add(await p.getAttribute('.morph', 'data-step'));
+      ok('home: morph advances through all 4 modes on scroll', stepStart === '0' && ['0', '1', '2', '3'].every((s) => seen.has(s)), [...seen].sort().join('→'));
+      await p.evaluate(() => window.scrollTo(0, 0));
+      await p.waitForTimeout(200);
+
+      // --- any-source + kept-alive teaser ---
+      ok('home: any-source section lists 4 sources', (await p.$$('#sources .source')).length === 4, String((await p.$$('#sources .source')).length));
+      ok('home: kept-alive teaser links the ROADMAP', (await p.$$('#alive a[href*="ROADMAP.md"]')).length >= 1);
+      ok('home: roadmap framing (coming / roadmap pills)', await p.evaluate(() => {
+        const t = [...document.querySelectorAll('#alive .pill .t')].map((e) => e.textContent.trim().toLowerCase());
+        return t.filter((x) => x === 'coming').length === 2 && t.includes('roadmap');
+      }));
+
+      // --- the demo picker (gallery, opens on the CTA) ---
+      ok('home: demo picker dialog + gallery present', await p.evaluate(() => {
+        const d = document.getElementById('demo-picker');
+        const cards = document.querySelectorAll('#demo-list .demo-card');
+        const loadable = [...cards].some((c) => (c.getAttribute('href') || '') === 'app/?p=moav-pdf');
+        return !!d && cards.length >= 1 && loadable;
+      }));
+      await p.click('.hero .btn-primary');
+      await p.waitForTimeout(250);
+      const pickerOpen = await p.evaluate(() => document.getElementById('demo-picker')?.open === true);
+      ok('home: CTA opens the demo picker', pickerOpen);
+      await p.keyboard.press('Escape').catch(() => {});
+      await p.waitForTimeout(150);
+
+      ok('home: nav links Docs + repo + builder', (await p.$$('a[href="docs/"]')).length >= 1 && (await p.$$('a[href*="github.com/ibeezhan/p2present"]')).length >= 1 && (await p.$$('a[href="builder/"]')).length >= 1);
       const og = await p.evaluate(() => ({
         title: document.querySelector('meta[property="og:title"]')?.content || '',
         image: document.querySelector('meta[property="og:image"]')?.content || '',
@@ -234,14 +274,44 @@ async function main() {
       ok('home: OG/meta tags present', /p2present/i.test(og.title) && /\.png$/.test(og.image) && og.desc.length > 20, JSON.stringify(og).slice(0, 80));
       ok('home: favicon link present', await p.$('link[rel="icon"]'));
       ok('home: home.css 200', homeAssets['/home.css'] === 200, String(homeAssets['/home.css']));
+      ok('home: home.js 200', homeAssets['/home.js'] === 200, String(homeAssets['/home.js']));
+      ok('home: vendored Lenis 200', homeAssets['/vendor/lenis.min.js'] === 200, String(homeAssets['/vendor/lenis.min.js']));
       for (const w of [1280, 780, 390]) {
         await p.setViewportSize({ width: w, height: w === 390 ? 800 : 860 });
+        await p.waitForTimeout(200);
+        // walk the page so reveal-on-scroll + morph settle before the shot
+        await p.evaluate(async () => {
+          const h = document.body.scrollHeight;
+          for (let y = 0; y <= h; y += Math.floor(window.innerHeight * 0.6)) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 30)); }
+          window.scrollTo(0, 0);
+        });
         await p.waitForTimeout(250);
         await p.screenshot({ path: path.join(SHOTS, `home-${w}.png`), fullPage: true });
       }
       const noHScroll = await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 2);
       ok('home: no horizontal overflow at 390px', noHScroll);
       ok('home: no same-origin console errors', p._consoleErrors.length === 0, p._consoleErrors.slice(0, 2).join(' | '));
+      await p.close();
+    }
+
+    // === 0a. Docs hub (/docs/) — the moved-out tech depth ===
+    {
+      const p = await newPage(context);
+      const a = {};
+      p.on('response', (r) => { const u = r.url(); if (u.startsWith(ORIGIN)) a[u.replace(ORIGIN, '')] = r.status(); });
+      await p.goto(`${ORIGIN}/docs/`, { waitUntil: 'load' });
+      ok('docs: hub renders', /spec|format|tooling/i.test(await p.textContent('.docs-hero h1')));
+      ok('docs: has doc cards', (await p.$$('.doc-card')).length >= 6, String((await p.$$('.doc-card')).length));
+      ok('docs: links SPEC + AUTHORING + schema', (await p.$$('a[href*="SPEC.md"]')).length >= 1 && (await p.$$('a[href*="AUTHORING.md"]')).length >= 1 && (await p.$$('a[href*="p2present.schema.json"]')).length >= 1);
+      ok('docs: schema asset resolves 200', a['/p2present.schema.json'] === 200 || (await p.evaluate(() => fetch('../p2present.schema.json').then((r) => r.ok).catch(() => false))));
+      for (const w of [1280, 780, 390]) {
+        await p.setViewportSize({ width: w, height: w === 390 ? 800 : 860 });
+        await p.waitForTimeout(150);
+        await p.screenshot({ path: path.join(SHOTS, `docs-${w}.png`), fullPage: true });
+      }
+      const noHScroll = await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 2);
+      ok('docs: no horizontal overflow at 390px', noHScroll);
+      ok('docs: no same-origin console errors', p._consoleErrors.length === 0, p._consoleErrors.slice(0, 2).join(' | '));
       await p.close();
     }
 
