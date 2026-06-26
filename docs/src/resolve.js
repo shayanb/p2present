@@ -88,19 +88,18 @@ export async function fetchFirstOk(urls, what = 'resource', initOverride) {
 
 // --- WebTorrent (lazy browser bundle) --------------------------------------
 
-const WEBTORRENT_CDN = 'https://cdn.jsdelivr.net/npm/webtorrent@2.6.11/webtorrent.min.js';
+// The standalone browser bundle that defines `window.WebTorrent` (the v1.x line
+// still ships the prebuilt UMD `webtorrent.min.js`; v2+ is ESM-only). Tried in
+// order so a single CDN hiccup doesn't kill p2p playback.
+const WEBTORRENT_CDNS = [
+  'https://cdn.jsdelivr.net/npm/webtorrent@1.9.7/webtorrent.min.js',
+  'https://unpkg.com/webtorrent@1.9.7/webtorrent.min.js',
+];
 let _wtClient = null;
 let _wtLoading = null;
 
-function loadScriptOnce(url) {
+function injectScript(url) {
   return new Promise((resolve, reject) => {
-    if (window.WebTorrent) return resolve(window.WebTorrent);
-    const existing = document.querySelector(`script[data-p2="webtorrent"]`);
-    if (existing) {
-      existing.addEventListener('load', () => resolve(window.WebTorrent), { once: true });
-      existing.addEventListener('error', () => reject(new Error('WebTorrent bundle failed to load')), { once: true });
-      return;
-    }
     const s = document.createElement('script');
     s.src = url;
     s.async = true;
@@ -109,16 +108,26 @@ function loadScriptOnce(url) {
       if (window.WebTorrent) resolve(window.WebTorrent);
       else reject(new Error('WebTorrent bundle loaded but global missing'));
     }, { once: true });
-    s.addEventListener('error', () => reject(new Error(`WebTorrent bundle failed to load from ${url}`)), { once: true });
+    s.addEventListener('error', () => { s.remove(); reject(new Error(`failed to load ${url}`)); }, { once: true });
     document.head.appendChild(s);
   });
+}
+
+async function loadWebTorrentGlobal() {
+  if (window.WebTorrent) return window.WebTorrent;
+  const errors = [];
+  for (const url of WEBTORRENT_CDNS) {
+    try { return await injectScript(url); }
+    catch (err) { errors.push(err.message); }
+  }
+  throw new Error('Could not load the WebTorrent browser bundle. ' + errors.join(' | '));
 }
 
 /** Lazily load the WebTorrent browser bundle and return a shared client. */
 export async function getWebTorrentClient() {
   if (_wtClient) return _wtClient;
   if (!_wtLoading) {
-    _wtLoading = loadScriptOnce(WEBTORRENT_CDN).then((WT) => {
+    _wtLoading = loadWebTorrentGlobal().then((WT) => {
       _wtClient = new WT();
       _wtClient.on('error', (e) => console.warn('[webtorrent] client error:', e?.message || e));
       return _wtClient;
