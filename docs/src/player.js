@@ -13,12 +13,20 @@ import { SubtitleController } from './subtitles.js';
 import { formatTime } from './time.js';
 
 const SPEEDS = [0.75, 1, 1.1, 1.25, 1.5, 1.75, 2];
+// Layout modes. Each icon is a tiny SVG that literally depicts the pane split it
+// produces (deck is the left/larger pane, video the right/smaller one), so the
+// switcher is legible without prior knowledge; `short` is the visible text label.
 const MODES = [
-  { id: 'split',        icon: '▥', label: 'Split (side by side)' },
-  { id: 'slides-focus', icon: '▢', label: 'Slides focus' },
-  { id: 'video-focus',  icon: '▣', label: 'Video focus' },
-  { id: 'overlap',      icon: '◳', label: 'Overlap (video as floating PiP)' },
+  { id: 'split',        short: 'Split',  label: 'Split — slides and video side by side, equal panes',
+    icon: '<rect x="1" y="1.5" width="6.2" height="9" rx="1"/><rect x="8.8" y="1.5" width="6.2" height="9" rx="1"/>' },
+  { id: 'slides-focus', short: 'Slides', label: 'Slides focus — large slides with a small video',
+    icon: '<rect x="1" y="1.5" width="9.2" height="9" rx="1"/><rect x="11.6" y="1.5" width="3.4" height="9" rx="1"/>' },
+  { id: 'video-focus',  short: 'Video',  label: 'Video focus — large video with small slides',
+    icon: '<rect x="1" y="1.5" width="3.4" height="9" rx="1"/><rect x="5.8" y="1.5" width="9.2" height="9" rx="1"/>' },
+  { id: 'overlap',      short: 'PiP',    label: 'Overlap — full slides with the video in a floating corner (picture-in-picture)',
+    icon: '<rect x="1" y="1.5" width="14" height="9" rx="1"/><rect class="f" x="9.3" y="6" width="4.7" height="3.6" rx="0.6"/>' },
 ];
+const FS_ICON = '<path d="M1.5 4.5 V1.5 H4.5 M11.5 1.5 H14.5 V4.5 M14.5 7.5 V10.5 H11.5 M4.5 10.5 H1.5 V7.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
 const LS = {
   split: 'p2present:split',
   mode: 'p2present:mode',
@@ -175,9 +183,8 @@ export class Player {
     modeGroup.setAttribute('aria-label', 'Layout mode');
     this.modeButtons = {};
     for (const m of MODES) {
-      const b = button(m.icon, m.label, () => this.setMode(m.id));
+      const b = iconButton(svgIcon(m.icon), m.short, m.label, () => this.setMode(m.id));
       b.classList.add('p2-mode-btn');
-      b.setAttribute('aria-label', m.label);   // icon-only: name it for AT + tooltip
       this.modeButtons[m.id] = b;
       modeGroup.appendChild(b);
     }
@@ -186,7 +193,8 @@ export class Player {
     const ccWrap = this._buildCcMenu();
 
     // Fullscreen (native where supported; CSS-maximized fallback for iOS Safari).
-    this.btnFs = button('⛶', 'Fullscreen (f)', () => this._toggleFullscreen());
+    this.btnFs = iconButton(svgIcon(FS_ICON), 'Full', 'Fullscreen (f)', () => this._toggleFullscreen());
+    this.btnFs.classList.add('p2-mode-btn', 'p2-fs-btn');
     this.btnFs.setAttribute('aria-pressed', 'false');
     document.addEventListener('fullscreenchange', this._onFsChange = () => {
       this._updateFsButton();
@@ -736,6 +744,27 @@ function spacer() { return el('span', 'p2-spacer'); }
 function button(text, title, onClick) {
   const b = el('button', 'p2-btn');
   b.type = 'button'; b.textContent = text; b.title = title; b.setAttribute('aria-label', title);
+  b.addEventListener('click', onClick);
+  return b;
+}
+// A small inline-SVG icon (depicts a layout). innerHTML on an <svg> element puts
+// the children in the SVG namespace; markup is our own constant, never user input.
+function svgIcon(inner) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 16 12');
+  svg.setAttribute('class', 'p2-mode-ico');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  svg.innerHTML = inner;
+  return svg;
+}
+// A button that pairs an icon with a short, visible text label (hidden on narrow
+// widths via CSS) plus a full tooltip/aria-label for clarity + accessibility.
+function iconButton(iconEl, short, title, onClick) {
+  const b = el('button', 'p2-btn p2-icon-btn');
+  b.type = 'button'; b.title = title; b.setAttribute('aria-label', title);
+  const lbl = el('span', 'p2-btn-label'); lbl.textContent = short; lbl.setAttribute('aria-hidden', 'true');
+  b.append(iconEl, lbl);
   b.addEventListener('click', onClick);
   return b;
 }

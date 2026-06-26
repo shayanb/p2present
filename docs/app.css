@@ -220,9 +220,22 @@ body {
   color: var(--muted); white-space: nowrap; user-select: none;
 }
 .p2-modes { display: inline-flex; gap: 4px; }
-.p2-mode-btn { min-width: 38px; padding: 8px 10px; font-size: 16px; line-height: 1; }
+/* Icon buttons: SVG glyph that depicts the layout, with a short label beneath. */
+.p2-icon-btn {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: auto; padding: 5px 9px; line-height: 1;
+}
+.p2-mode-ico { width: 19px; height: 14px; display: block; }
+.p2-mode-ico rect, .p2-mode-ico path { fill: none; stroke: currentColor; stroke-width: 1.2; }
+.p2-mode-ico .f { fill: currentColor; stroke: none; }   /* PiP inset = filled */
+.p2-btn-label {
+  font-size: 9px; letter-spacing: 0.04em; text-transform: uppercase;
+  line-height: 1; color: inherit;
+}
 .p2-mode-btn.is-on { border-color: var(--accent); color: var(--accent); background: var(--panel); }
 .p2-btn.is-on { border-color: var(--accent); color: var(--accent); }
+/* Narrow widths: drop the text labels (icon + tooltip/aria-label remain). */
+@media (max-width: 560px) { .p2-btn-label { display: none; } }
 
 /* resolver disclosure toggle (mobile only — desktop keeps the bar inline) */
 .p2-source-toggle {

@@ -2,11 +2,11 @@
 
 Resumable checklist. Commit + push each step.
 
-## 1. PDF deck black-slide bug (priority)
-- [ ] Reproduce in headless Chrome (screenshot several pdf slides, measure brightness)
-- [ ] Find root cause (transition / canvas / grid / overlay)
-- [ ] Fix so every pdf slide renders + STAYS visible incl. transitions
-- [ ] Regression check: screenshot N pdf slides, assert not blank/near-black
+## 1. PDF deck black-slide bug (priority) ✅
+- [x] Reproduce in headless Chrome (measure brightness — visible:0 / opacity:0)
+- [x] Root cause: persisted WAAPI fill:'both' opacity:0 + cut only toggling display + overlapping transitions
+- [x] Fix: adapter commits canonical visibility per nav, nav token guards overlap, absolute-stacked pages
+- [x] Regression: smoke walks 7 slides + rapid burst, asserts non-blank/visible
 
 ## 2. Layout icons — meaningful glyphs + labels
 - [ ] split / slides-focus / video-focus / overlap / fullscreen glyphs depict mode
