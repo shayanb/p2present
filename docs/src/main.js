@@ -7,16 +7,23 @@
 //                        OR a source URL/CID/magnet (auto-detected).
 //   2. ?manifest=<url> — load a p2present.json from any provider (https/ipfs/magnet).
 //   3. ?p=<name>       — a bundled local manifest at content/<name>/manifest.json.
-//   4. DEFAULT_SOURCE  — the bundled demo.
+//   4. ?demo           — alias for the bundled MoaV PDF demo (?p=moav-pdf).
+//   5. DEFAULT_SOURCE  — the bundled HTML demo.
 //
 // The source box routes whatever you type through ?manifest=. The "Share" button
 // builds a self-contained ?src=<base64> link for the current presentation.
+//
+// The player lives at /app/ but its bundled content (content/…) sits at the docs
+// ROOT, so every bundled path is resolved against ROOT (derived from this module's
+// URL) rather than the page — keeping the player path-independent.
 
 import { loadPresentation } from './manifest.js';
 import { encodeBase64, decodeBase64 } from './resolve.js';
 import { Player } from './player.js';
 
-const DEFAULT_SOURCE = 'content/demo/manifest.json';
+// This module is docs/src/main.js, so '../' is the docs root that holds content/.
+const ROOT = new URL('../', import.meta.url).href;
+const DEFAULT_SOURCE = 'content/demo/manifest.json';   // relative to ROOT
 
 const $src = document.getElementById('source-input');
 const $form = document.getElementById('source-form');
@@ -49,8 +56,9 @@ function setStatus(msg, isError = false) {
   $status.classList.toggle('is-error', !!isError);
 }
 
+// Bundled content paths resolve against the docs ROOT (not the /app/ page URL).
 function absolute(rel) {
-  try { return new URL(rel, window.location.href).href; } catch { return rel; }
+  try { return new URL(rel, ROOT).href; } catch { return rel; }
 }
 
 /** Work out what to load from the URL query (see header comment for order). */
@@ -73,13 +81,15 @@ function parseBootSource() {
   const manifest = q.get('manifest');
   if (manifest) return { source: manifest, share: manifest, display: manifest };
 
-  const p = q.get('p');
+  // ?demo is a friendly alias for the bundled MoaV PDF demo.
+  const p = q.get('p') || (q.has('demo') ? 'moav-pdf' : null);
   if (p && /^[\w.-]+$/.test(p)) {
-    const url = `content/${p}/manifest.json`;
-    return { source: url, share: absolute(url), display: '' };
+    const url = absolute(`content/${p}/manifest.json`);
+    return { source: url, share: url, display: '' };
   }
 
-  return { source: DEFAULT_SOURCE, share: absolute(DEFAULT_SOURCE), display: '' };
+  const def = absolute(DEFAULT_SOURCE);
+  return { source: def, share: def, display: '' };
 }
 
 async function run({ source, share, display }) {
@@ -180,7 +190,8 @@ $sourceToggle.addEventListener('click', () => {
 (function markActiveDemo() {
   const q = new URLSearchParams(window.location.search);
   const hasOtherSource = q.has('src') || q.has('manifest');
-  const active = hasOtherSource ? null : (q.get('p') || 'demo');
+  const active = hasOtherSource ? null
+    : (q.get('p') || (q.has('demo') ? 'moav-pdf' : 'demo'));
   document.querySelectorAll('.p2-nav-link[data-demo]').forEach((a) => {
     a.classList.toggle('is-active', a.dataset.demo === active);
   });
