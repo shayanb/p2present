@@ -27,19 +27,22 @@ blocking playback. ENS reverse-resolve for display, read-only, graceful fallback
 - ed25519: WebCrypto verify(canonBytes) against signer.key (raw 32-byte pubkey).
 
 ## Tasks
-- [ ] crypto/keccak.js (keccak-256, BigInt lanes) — vector-checked
-- [ ] crypto/secp256k1.js (sign + recoverAddress + address-from-pubkey) — privkey=1 vector
-- [ ] sign.js: canonicalize, signEip191WithKey, signEd25519, verifyManifest, reverseEns
-- [ ] schema: add optional `sig` block; SPEC.md "Signing" section; manifest carries raw.sig
-- [ ] Builder: Sign panel (wallet personal_sign / paste ETH key / generate Ed25519) → embeds sig
-- [ ] Player: verify on load → badge (✓ signed by …), subtle unsigned/invalid; never block
-- [ ] Tests: round-trip eip191 + ed25519, tampered fails, unsigned ok, canonicalize stable
-- [ ] Smoke: signed-badge check (signed fixture), unsigned ok, 390/780/1280 green
-- [ ] Docs: README + AUTHORING + DOCS; schema in sync
-- [ ] DONE gate: commit+push, write .phase8.done, telegram summary+URL
+- [x] crypto/keccak.js (keccak-256, BigInt lanes) — vector-checked (empty/abc/hello)
+- [x] crypto/secp256k1.js (sign + recoverAddress + address-from-pubkey) — privkey=1 + web3 key vectors; Node-interop recover confirmed
+- [x] sign.js: canonicalize, signEip191WithKey/Wallet, signEd25519, verifyManifest, describeSigner; crypto/ens.js reverseEns (forward-confirmed)
+- [x] schema: optional `sig` block; SPEC.md top-level row + "Signing" section; manifest carries raw.sig
+- [x] Builder: 🔏 Sign card (wallet personal_sign / paste ETH key / generate Ed25519) → embeds sig; stale-on-edit warning; remove
+- [x] Player: verify _raw on load → header badge (✓ signed by ENS/0x…), subtle unsigned/invalid; never blocks; ENS upgrade gated by window.__P2_ENS
+- [x] Tests: 35/35 — keccak/secp vectors, canonicalize stable, eip191+ed25519 round-trip, tamper (content+signer), unsigned ok, schema accepts sig
+- [x] Smoke: 99/99 — valid badge, tampered→invalid (still plays), unsigned pill, builder sign+stale; signed-badge.png; 390/780/1280, 0 real console errors
+- [x] Docs: README + AUTHORING + DOCS + SPEC; schema in sync
+- [x] DONE gate: commit+push each step, write .phase8.done, telegram summary+URL
 
 ## Progress log
 - (init) Read full codebase. Designed sig scheme above. No telegram/secrets in repo;
   telegram via `openclaw message send --channel telegram --target '-5269558152'`.
+- Built dependency-free crypto (keccak256 + secp256k1, vector + Node-interop verified) → sign.js
+  (canonical JSON, EIP-191 + Ed25519, verify, ENS) → schema/SPEC/manifest passthrough → player
+  badge → builder Sign card → 35 unit + 99 smoke green. Committed + pushed each step.
 </content>
 </invoke>
