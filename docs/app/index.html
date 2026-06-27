@@ -36,6 +36,10 @@
       </button>
       <span class="p2-deck-title" id="deck-title"></span>
       <span class="p2-sig-badge" id="sig-badge" hidden></span>
+      <!-- affordance: hints the header opens on hover/click while collapsed -->
+      <button class="p2-shell-hint" id="shell-hint" type="button" aria-hidden="true" tabindex="-1" title="Hover or click for player controls">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
     </div>
 
     <!-- Everything that folds away when collapsed lives in one cluster. -->
@@ -78,6 +82,10 @@
             placeholder="Paste a source — https://…/p2present.json · ipfs://CID · magnet:?xt=…"
             aria-label="Presentation source URL, IPFS CID, or magnet link"
           />
+          <label class="p2-load p2-file-open" id="source-file-label" title="Open a local p2present.json file" aria-label="Open a local manifest file">
+            <svg class="p2-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            <input type="file" id="source-file" accept=".json,application/json" hidden />
+          </label>
           <button type="submit" class="p2-load p2-load-icon" title="Load source" aria-label="Load source">↵</button>
         </form>
 

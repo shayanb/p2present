@@ -41,9 +41,12 @@ const DEFAULT_MODE = 'overlap'; // default p2p/PiP view; manifests may override
 
 export class Player {
   /** @param {object} manifest normalised manifest @param {HTMLElement} root */
-  constructor(manifest, root) {
+  constructor(manifest, root, options = {}) {
     this.manifest = manifest;
     this.root = root;
+    // captureMode: used by the Builder's timing-capture panel — skip the center
+    // START gate so the slides + video are visible and scrubbable right away.
+    this.options = options || {};
     // Layout defaults come from the manifest; localStorage overrides them.
     this.split = readNum(LS.split, manifest.layout?.split ?? 0.6, 0.15, 0.85);
     this.mode = readStr(LS.mode, manifest.layout?.mode || DEFAULT_MODE,
@@ -77,9 +80,12 @@ export class Player {
     // tucked clear of the controls bar and centered captions.
     stage.appendChild(brandWatermark());
     // Center brand "start" overlay — the large play affordance shown before the
-    // talk begins (hidden via .p2-started once playback starts).
-    this.startOverlay = buildStartOverlay(() => this._start());
-    stage.appendChild(this.startOverlay);
+    // talk begins (hidden via .p2-started once playback starts). Skipped entirely
+    // in capture mode, where the slides must be visible/scrubbable immediately.
+    if (!this.options.captureMode) {
+      this.startOverlay = buildStartOverlay(() => this._start());
+      stage.appendChild(this.startOverlay);
+    }
     this.stage = stage;
     this.deckPane = deckPane;
     this.videoPane = videoPane;
@@ -129,6 +135,9 @@ export class Player {
     this.applyLayout();
     this.sync.start();
     this.startHashSync();
+    // No START gate in capture mode → behave as already started so the deck and
+    // scrubber are immediately live.
+    if (this.options.captureMode) this._setStarted(true);
     return this;
   }
 
@@ -195,11 +204,18 @@ export class Player {
     }
     this.speed.addEventListener('change', () => this.video.setRate(parseFloat(this.speed.value)));
 
-    // Link / unlink sync toggle.
-    this.btnLink = button('🔗', 'Sync linked — click to unlink', () => {
+    // Link / unlink sync toggle — a "slides ⟲ video in sync" loop; a slash over
+    // it means the deck and video are scrubbing independently (unlinked).
+    this.btnLink = button('', 'Sync linked — slides follow the video. Click to unlink.', () => {
       this.sync.setLinked(!this.sync.linked);
     });
     this.btnLink.classList.add('p2-link', 'is-linked');
+    this.btnLink.innerHTML =
+      '<svg class="p2-sync-ico" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M4 9.6a7.6 7.6 0 0 1 13-4.3L19 7.4"/><path d="M19 3.2v4.2h-4.2"/>' +
+        '<path d="M20 14.4a7.6 7.6 0 0 1-13 4.3L5 16.6"/><path d="M5 20.8v-4.2h4.2"/>' +
+        '<line class="p2-sync-slash" x1="3.5" y1="20.5" x2="20.5" y2="3.5"/>' +
+      '</svg>';
 
     // Layout-mode switcher — a single button showing the current layout that
     // unfolds to reveal all four modes (see _buildLayoutFold).
@@ -489,7 +505,9 @@ export class Player {
     this.btnPlay.textContent = s.playing ? '⏸' : '▶';
     this.btnPlay.title = s.playing ? 'Pause (space)' : 'Play (space)';
     this.btnLink.classList.toggle('is-linked', s.linked);
-    this.btnLink.title = s.linked ? 'Sync linked — click to unlink' : 'Sync unlinked — click to link';
+    this.btnLink.title = s.linked
+      ? 'Sync linked — slides follow the video. Click to unlink.'
+      : 'Sync unlinked — browse slides freely. Click to re-link.';
     this.btnLink.setAttribute('aria-pressed', String(s.linked));
     this.subs.update(s.time);   // drives the YouTube caption overlay
   }

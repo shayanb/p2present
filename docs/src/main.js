@@ -241,6 +241,33 @@ $form.addEventListener('submit', (e) => {
   run(val ? { source: val, share: val, display: val } : parseBootSource());
 });
 
+// Open a local p2present.json from disk — the "Load" counterpart to "Export
+// manifest JSON". Parsed object is handed straight to run(); the raw text becomes
+// shareValue so "Copy presentation link" still produces a self-contained ?src link.
+const $sourceFile = document.getElementById('source-file');
+if ($sourceFile) {
+  $sourceFile.addEventListener('change', async () => {
+    const file = $sourceFile.files && $sourceFile.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const obj = JSON.parse(text);
+      if (!obj || typeof obj !== 'object') throw new Error('Not a JSON object');
+      // drop any URL source params so a refresh doesn't fight the loaded file
+      const url = new URL(window.location.href);
+      ['src', 'p', 'manifest', 'demo'].forEach((k) => url.searchParams.delete(k));
+      history.replaceState(null, '', url);
+      $header.classList.remove('p2-source-open');
+      $sourceToggle.setAttribute('aria-expanded', 'false');
+      run({ source: obj, share: text, display: file.name });
+    } catch (err) {
+      setStatus(`Couldn't read that file as a manifest: ${err.message || err}`, true);
+    } finally {
+      $sourceFile.value = '';   // allow re-picking the same file
+    }
+  });
+}
+
 // Build a self-contained ?src=<base64> share link for the current presentation
 // and copy it to the clipboard. `withSpot` appends a #t=…&slide=… deep-link.
 async function copyShareLink(withSpot) {
@@ -351,12 +378,14 @@ if ($shellToggle) {
     if (!collapsed) setShellState({ collapsed: true });
     else setShellState({ collapsed: true, pinned: !pinned });
   });
-  $brandToggle?.addEventListener('click', () => {
+  const toggleFromBrand = () => {
     const collapsed = $header.classList.contains('p2-shell-collapsed');
     const pinned = $header.classList.contains('p2-shell-pinned');
     if (!collapsed) setShellState({ collapsed: true });
     else setShellState({ collapsed: true, pinned: !pinned });
-  });
+  };
+  $brandToggle?.addEventListener('click', toggleFromBrand);
+  document.getElementById('shell-hint')?.addEventListener('click', toggleFromBrand);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       setShellState({ collapsed: $header.classList.contains('p2-shell-collapsed') });

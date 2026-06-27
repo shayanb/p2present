@@ -87,6 +87,29 @@ body {
 .p2-deck-title::before { content: "·"; margin-right: 8px; }
 .p2-deck-title:empty::before { content: none; }
 
+/* collapsed-header affordance: a pulsing chevron that says "there's more here".
+   Visible while collapsed, rotates + dims once the controls are revealed. */
+.p2-shell-hint {
+  flex: none; display: inline-grid; place-items: center;
+  width: 22px; height: 22px; margin-left: 2px; padding: 0; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.12); border-radius: 7px;
+  background: rgba(255,255,255,.04); color: var(--muted);
+  transition: transform .3s var(--ease), opacity .25s ease, color .2s ease, border-color .2s ease, background .2s ease;
+}
+.p2-shell-hint svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.p2-header:hover .p2-shell-hint, .p2-header:focus-within .p2-shell-hint { color: var(--accent); border-color: var(--accent-dim); }
+.p2-shell-hint:hover { color: var(--accent); border-color: var(--accent); background: rgba(79,209,197,.1); }
+/* collapsed → point right (expand) + gently pulse to attract the eye */
+.p2-header.p2-shell-collapsed:not(.p2-shell-pinned):not(:hover):not(:focus-within) .p2-shell-hint {
+  animation: p2HintPulse 2.4s ease-in-out infinite;
+}
+/* expanded (hover/focus/pinned/uncollapsed) → flip to a collapse hint */
+.p2-header:not(.p2-shell-collapsed) .p2-shell-hint,
+.p2-header.p2-shell-pinned .p2-shell-hint,
+.p2-header:hover .p2-shell-hint,
+.p2-header:focus-within .p2-shell-hint { transform: rotate(180deg); }
+@keyframes p2HintPulse { 0%,100%{ opacity: .55; transform: translateX(0); } 50%{ opacity: 1; transform: translateX(2px); } }
+
 /* --- author signature badge (Phase 8) --- */
 .p2-sig-badge {
   font-size: 12px; font-weight: 500; line-height: 1;
@@ -154,11 +177,12 @@ body {
 
 /* the source/"Load" form: drops inline to the cluster's own row when opened */
 .p2-source {
-  display: none; grid-template-columns: minmax(180px, 32vw) auto;
+  display: none; grid-template-columns: minmax(160px, 32vw) auto auto;
   gap: 8px; min-width: 0; order: 5; flex-basis: 100%;
   transform-origin: left center;
   transition: opacity .24s ease, transform .28s var(--ease);
 }
+.p2-file-open { cursor: pointer; }
 .p2-header.p2-source-open .p2-cluster { flex-wrap: wrap; }
 .p2-header.p2-source-open .p2-source { display: grid; }
 .p2-source input {
@@ -501,8 +525,11 @@ body {
 .p2-time, .p2-slidecount { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
 .p2-slidecount { color: var(--fg); }
 .p2-speed { padding: 6px 8px; }
-.p2-link { font-size: 16px; filter: grayscale(1) opacity(0.5); }
-.p2-link.is-linked { filter: none; border-color: var(--accent); }
+.p2-link { color: var(--muted); border-color: var(--line); }
+.p2-link.is-linked { color: var(--accent); border-color: var(--accent); }
+.p2-sync-ico { width: 17px; height: 17px; display: block; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.p2-sync-slash { stroke: var(--muted); }
+.p2-link.is-linked .p2-sync-slash { display: none; }
 
 /* layout-mode switcher + the grouped "Layout" view cluster */
 .p2-layout-group {
