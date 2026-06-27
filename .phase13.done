@@ -1,8 +1,0 @@
-Phase 13 done.
-
-- YouTube/local timeline slider seeks video and slides authoritatively from paused/cold/playing states.
-- Player controls are QuickTime-style floating glass chrome, shown on activity/tap and auto-hidden.
-- Center START overlay and folded layout switcher are implemented.
-- Default layout is p2p/PiP (`overlap`) unless JSON overrides `layout.mode`.
-- Homepage source nodes stream into the central player with scroll-intensified flow.
-- Verified with `npm test` and `npm run smoke` (121/121).

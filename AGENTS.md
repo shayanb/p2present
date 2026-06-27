@@ -60,7 +60,6 @@ docs/                     ← the entire static app (this is what Pages serves)
 service/                  ← OPTIONAL Cloudflare Worker + KV (Save & share). Not core.
 scripts/  test.mjs  smoke.mjs  import-chapters.mjs
 *.md      README SPEC ROADMAP AUTHORING HOSTING SERVICE DOCS
-TODO.phaseN.md            per-phase task lists (history + acceptance criteria)
 ```
 
 **Adding a provider** = drop a module in `video/`, `decks/`, or `persist/`
@@ -87,9 +86,10 @@ verify visible changes on the live demo URL too.
 ## Conventions
 
 - Commits: short imperative subject, Conventional-Commits-ish (`feat(phaseN): …`,
-  `fix: …`, `chore: …`). Work is organized in **phases**; each lands as a
-  `TODO.phaseN.md` with checkboxes + a `## Verify` + `## Done` section and a
-  `.phaseN.done` marker when complete.
+  `fix: …`, `chore: …`). Work has historically been organized in **phases**;
+  that per-phase history lives in `git log` (the old `TODO.phaseN.md` /
+  `.phaseN.done` scaffolding has been retired — see the Status section below for
+  the current summary).
 - Style: vanilla ESM, no TS, no transpile. Match the surrounding file's idiom.
 - Never introduce a runtime dependency into `docs/`. CDN-lazy-load if unavoidable.
 - Keep `SPEC.md` and `docs/p2present.schema.json` in lockstep when the manifest
@@ -126,4 +126,4 @@ button, sources→player animation) + a header-UX refinement on top.
 - The optional Worker + payment hook → **SERVICE.md**
 - Vision / what's free vs paid / what's next → **ROADMAP.md**
 - One-page index of all docs → **DOCS.md**
-- Phase history + acceptance criteria → **TODO.phase*.md**
+- Phase history + acceptance criteria → `git log` (commits are tagged `feat(phaseN): …`)

@@ -1,1 +1,0 @@
-Phase 2 complete: WebTorrent + IPFS video/asset/deck providers, https/ipfs/magnet resolver routing, ?manifest=/?src=base64/?p= loading + share-link button, auto-hiding fullscreen overlay controls; v0 loader removed; SPEC/README/schema updated; unit 15/15 + headless smoke 21/21 + per-protocol screenshots. Live: https://ibeezhan.github.io/p2present/
