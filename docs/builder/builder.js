@@ -103,6 +103,31 @@ function normTime(v) {
   if (/^\d+(\.\d+)?$/.test(s)) return Number(s);
   return s; // "MM:SS" / "HH:MM:SS.mmm"
 }
+
+// Parse a cue value (number, plain seconds, or "M:SS"/"H:MM:SS(.ms)") → seconds.
+function toSeconds(v) {
+  if (typeof v === 'number') return v;
+  const s = String(v ?? '').trim();
+  if (s === '') return NaN;
+  if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+  const m = s.match(/^(\d+):([0-5]?\d)(?::([0-5]?\d))?(\.\d+)?$/);
+  if (!m) return NaN;
+  const a = Number(m[1]), b = Number(m[2]), c = m[3] != null ? Number(m[3]) : null;
+  const frac = m[4] ? Number(m[4]) : 0;
+  return (c != null ? a * 3600 + b * 60 + c : a * 60 + b) + frac;
+}
+// Format a cue value as clock time: "M:SS" / "H:MM:SS", keeping sub-second precision.
+// Leaves unparseable / mid-edit input untouched so typing isn't fought.
+function fmtClock(v) {
+  const sec = toSeconds(v);
+  if (!Number.isFinite(sec)) return String(v ?? '');
+  const a = Math.abs(sec), h = Math.floor(a / 3600), m = Math.floor((a % 3600) / 60);
+  const whole = Math.floor(a % 60);
+  const sub = a - Math.floor(a);
+  let ss = String(whole).padStart(2, '0');
+  if (sub > 0.0005) ss += sub.toFixed(3).slice(1).replace(/0+$/, '');
+  return (sec < 0 ? '-' : '') + (h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`);
+}
 function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
 
 // --- dynamic-list rendering -------------------------------------------------
@@ -195,8 +220,11 @@ function renderTiming() {
   const c = $('list-timing'); c.innerHTML = '';
   state.timing.forEach((row, i) => {
     const r = el('div', 'p2-row p2-row-timing');
+    // Show the cue as M:SS; normalise the display on blur but keep raw text while typing.
+    const timeCell = input(fmtClock(row.time), (v) => { row.time = v; }, { placeholder: 'm:ss' });
+    timeCell.addEventListener('blur', () => { timeCell.value = fmtClock(row.time); });
     r.append(
-      input(row.time, (v) => { row.time = v; }, { placeholder: 'time (s or MM:SS)' }),
+      timeCell,
       input(row.slide, (v) => { row.slide = v; }, { placeholder: 'slide', inputMode: 'numeric' }),
       select(row.transition || 'cut', TRANSITIONS, (v) => { row.transition = v; }),
       input(row.label, (v) => { row.label = v; }, { placeholder: 'label (optional)' }),
@@ -487,7 +515,7 @@ async function toggleCapture() {
   try {
     const manifest = await loadPresentation(JSON.parse(jsonText()));
     const mount = $('capture-mount'); mount.innerHTML = '';
-    capturePlayer = new Player(manifest, mount);
+    capturePlayer = new Player(manifest, mount, { captureMode: true });
     await capturePlayer.mount();
     $('capture-status').textContent = 'Play the video, navigate the slides, then stamp.';
   } catch (err) {
@@ -503,7 +531,7 @@ function stampTiming() {
   if (!capturePlayer) { $('capture-status').textContent = 'Open the capture player first.'; return; }
   const { t, slide } = capturePlayer.spot();
   state.timing.push({ time: t, slide, transition: 'cut', label: '' });
-  state.timing.sort((a, b) => normTime(a.time) - normTime(b.time));
+  state.timing.sort((a, b) => toSeconds(a.time) - toSeconds(b.time));
   renderTiming(); updatePreview();
   $('capture-status').textContent = `Stamped slide ${slide} at ${t}s.`;
 }
@@ -564,7 +592,7 @@ function init() {
     const txt = $('load-paste').value.trim(); if (!txt) return;
     try { loadState(JSON.parse(txt)); $('load-paste').value = ''; } catch (err) { alert('Invalid JSON: ' + err.message); }
   });
-  $('sort-timing').addEventListener('click', () => { state.timing.sort((a, b) => normTime(a.time) - normTime(b.time)); renderTiming(); updatePreview(); });
+  $('sort-timing').addEventListener('click', () => { state.timing.sort((a, b) => toSeconds(a.time) - toSeconds(b.time)); renderTiming(); updatePreview(); });
   $('capture-toggle').addEventListener('click', toggleCapture);
   $('capture-stamp').addEventListener('click', stampTiming);
   $('act-open').addEventListener('click', openInPlayer);
