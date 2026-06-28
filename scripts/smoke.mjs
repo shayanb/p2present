@@ -818,6 +818,14 @@ async function main() {
         !!document.getElementById('s-video') &&
         getComputedStyle(document.querySelector('.p2-adv')).display === 'none');
       ok('builder: simple view is the default (guided fields; advanced hidden)', simpleDefault);
+      // Simple flow auto-detects a Google Slides URL as an embed deck.
+      await p.fill('#s-deck', 'https://docs.google.com/presentation/d/ABC123/edit?slide=id.g1#slide=id.g1');
+      await p.waitForTimeout(150);
+      const gslides = await p.evaluate(() => {
+        try { return JSON.parse(document.querySelector('#json code').textContent).deck.type; } catch { return null; }
+      });
+      ok('builder: Google Slides URL → embed deck type', gslides === 'embed', gslides);
+      await p.evaluate(() => { const i = document.getElementById('s-deck'); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); });
       // Switch to Advanced for the field-level checks below.
       await p.click('#mode-advanced');
       await p.waitForTimeout(150);

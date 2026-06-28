@@ -13,9 +13,20 @@
 
 import { BaseDeckAdapter } from './base.js';
 
+// Google Slides share/edit/present URLs aren't embeddable as-is (they open the
+// editor and need auth). Rewrite any docs.google.com/presentation link to its
+// /embed form so pasting the normal URL Just Works. Handles both /d/<id>/… and
+// published /d/e/<id>/… forms; leaves every other URL untouched.
+export function normalizeEmbedUrl(src) {
+  const s = String(src || '');
+  const m = s.match(/docs\.google\.com\/presentation\/d\/(e\/[\w-]+|[\w-]+)/);
+  if (!m) return src;
+  return `https://docs.google.com/presentation/d/${m[1]}/embed?start=false&loop=false&rm=minimal`;
+}
+
 export class EmbedDeckAdapter extends BaseDeckAdapter {
   async load() {
-    this.src = await this._resolveDeckSrc();   // magnet: → Blob URL (rare for embeds)
+    this.src = normalizeEmbedUrl(await this._resolveDeckSrc());   // magnet: → Blob URL (rare for embeds)
     this._embed = this.manifest?.deck?.embed || null;
     this._base = this.src;
 

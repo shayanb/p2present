@@ -317,6 +317,17 @@ function inferVideoProvider(url) {
 }
 const VIDEO_KIND = { youtube: 'YouTube', mp4: 'MP4 / direct file', webtorrent: 'WebTorrent magnet', ipfs: 'IPFS' };
 
+// Guess the deck type from a slides URL: a .pdf → pdf, a Google Slides / SpeakerDeck /
+// Canva / generic embed → embed, an HTML page/dir → html. null = leave as chosen.
+function inferDeckType(url) {
+  const s = String(url || '').trim().toLowerCase();
+  if (!s) return null;
+  if (/\.pdf($|[?#])/.test(s)) return 'pdf';
+  if (/docs\.google\.com\/presentation|speakerdeck\.com|canva\.com\/design|\/embed($|[?#/])/.test(s)) return 'embed';
+  if (/\.html?($|[?#])|\/$/.test(s)) return 'html';
+  return null;
+}
+
 function bindSimple() {
   $('s-title').addEventListener('input', () => { state.title = $('s-title').value; $('f-title').value = state.title; updatePreview(); });
   $('s-video').addEventListener('input', () => {
@@ -329,9 +340,13 @@ function bindSimple() {
   });
   $('s-deck-type').addEventListener('change', () => { state.deck.type = $('s-deck-type').value; $('f-deck-type').value = state.deck.type; renderDeck(); updatePreview(); });
   $('s-deck').addEventListener('input', () => {
+    const url = $('s-deck').value;
     if (!state.deck.sources.length) state.deck.sources = [{ protocol: 'https', src: '' }];
-    state.deck.sources[0].src = $('s-deck').value;
-    state.deck.sources[0].protocol = inferProtocol($('s-deck').value);
+    state.deck.sources[0].src = url;
+    state.deck.sources[0].protocol = inferProtocol(url);
+    // auto-pick the deck type from the URL (PDF / Google-Slides embed / HTML)
+    const t = inferDeckType(url);
+    if (t && t !== state.deck.type) { state.deck.type = t; $('s-deck-type').value = t; $('f-deck-type').value = t; }
     renderDeck(); updatePreview();
   });
   $('s-chapters-apply').addEventListener('click', applyChapters);
@@ -561,21 +576,29 @@ function loadState(raw) {
 const str = (v) => (typeof v === 'string' ? v : (v == null ? '' : String(v)));
 const arr = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
 
-async function loadDemo() {
+// Absolutise a manifest's relative srcs against its own location so the capture
+// player + "Open in player" (inline ?src=) can load the bundled assets from any
+// page (the builder lives at /builder/, not next to /content/).
+function absolutiseManifest(raw, manifestPath) {
+  const base = new URL(manifestPath, window.location.href).href;
+  const abs = (u) => (u && !/^(https?:|ipfs:|magnet:|[\w.-]+:)/i.test(u) && !u.startsWith('//') ? new URL(u, base).href : u);
+  // Only file-path video providers get absolutised — youtube srcs are bare IDs.
+  if (raw.video?.sources) raw.video.sources = raw.video.sources.map((v) => (v.provider === 'mp4' ? { ...v, src: abs(v.src) } : v));
+  if (raw.deck?.sources) raw.deck.sources = raw.deck.sources.map((d) => ({ ...d, src: abs(d.src) }));
+  if (raw.subtitles) raw.subtitles = raw.subtitles.map((x) => ({ ...x, src: abs(x.src) }));
+  if (raw.video?.poster) raw.video.poster = abs(raw.video.poster);
+  return raw;
+}
+async function loadDemoFrom(manifestPath) {
   try {
-    const res = await fetch('../content/demo/manifest.json');
-    const raw = await res.json();
-    // Absolutise relative srcs so "Open in player" (inline ?src=) still resolves.
-    const base = new URL('../content/demo/manifest.json', window.location.href).href;
-    const abs = (u) => (u && !/^(https?:|ipfs:|magnet:|[\w.-]+:)/i.test(u) && !u.startsWith('//') ? new URL(u, base).href : u);
-    if (raw.deck?.sources) raw.deck.sources = raw.deck.sources.map((d) => ({ ...d, src: abs(d.src) }));
-    if (raw.subtitles) raw.subtitles = raw.subtitles.map((x) => ({ ...x, src: abs(x.src) }));
-    if (raw.video?.poster) raw.video.poster = abs(raw.video.poster);
-    loadState(raw);
+    const raw = await (await fetch(manifestPath)).json();
+    loadState(absolutiseManifest(raw, manifestPath));
   } catch (err) {
     alert('Could not load the demo manifest: ' + err.message);
   }
 }
+const loadDemo = () => loadDemoFrom('../content/demo/manifest.json');
+const loadDemoPdf = () => loadDemoFrom('../content/moav-pdf/manifest.json');
 
 // --- actions ----------------------------------------------------------------
 
@@ -585,7 +608,7 @@ function openInPlayer() {
   const errs = updatePreview();
   if (errs.length && !confirm(`This manifest has ${errs.length} issue(s). Open in the player anyway?`)) return;
   const b64 = encodeBase64(jsonText());
-  window.open(`../?src=${encodeURIComponent(b64)}`, '_blank');
+  window.open(`../app/?src=${encodeURIComponent(b64)}`, '_blank');
 }
 async function copyJson() {
   try { await navigator.clipboard.writeText(jsonText()); flash('act-copy', 'Copied ✓'); }
@@ -687,6 +710,7 @@ function init() {
 
   document.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => addRow(b.dataset.add)));
   $('load-demo').addEventListener('click', loadDemo);
+  $('load-demo-pdf')?.addEventListener('click', loadDemoPdf);
   $('reset-blank').addEventListener('click', () => { state = blankState(); fillStatic(); fillSimple(); renderAllLists(); updatePreview(); });
   $('load-file').addEventListener('change', async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
