@@ -188,6 +188,19 @@ export class Player {
       this.sync.seekToTime((this.scrub.value / 1000) * dur);
       this._showPreviewAtFraction(this.scrub.value / 1000);   // keep preview while dragging
     });
+    // Tap-to-seek: native range inputs on touch only drag from the thumb, so a tap
+    // elsewhere on the track fires no `input` and never seeks (it only moved the
+    // preview via pointermove). Jump the value to the tapped position on pointerdown
+    // so a tap anywhere seeks there, and a following drag continues from the thumb.
+    this.scrub.addEventListener('pointerdown', (e) => {
+      const rect = this.scrub.getBoundingClientRect();
+      if (!rect.width) return;
+      const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      this.scrub.value = Math.round(frac * 1000);
+      const dur = this.video.getDuration() || 0;
+      this.sync.seekToTime(frac * dur);
+      this._showPreviewAtFraction(frac, e.clientX);
+    });
     this._buildScrubPreview(bar);
 
     this.timeLabel = el('span', 'p2-time'); this.timeLabel.textContent = '0:00 / 0:00';
