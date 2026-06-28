@@ -432,13 +432,10 @@ footer.site .brand .logo { width: 24px; height: 24px; border-radius: 7px; }
    explanation, then (as --flow grows with scroll) the explanation collapses and
    the card rises up its wire toward the player: "every source streams in". */
 .src-node {
-  /* sit clearly OUTSIDE the player at the start (--x/--y), then drift toward a
-     dock point at the player's perimeter (--dx/--dy) as the flow intensifies —
-     "every source streams into the box" — never overlapping its centre. */
-  position: absolute;
-  left: calc(var(--x) + (var(--dx) - var(--x)) * var(--flow));
-  top: calc(var(--y) + (var(--dy) - var(--y)) * var(--flow));
-  transform: translate(-50%, -50%) scale(calc(1 - (.06 * var(--flow))));
+  /* anchored at --x/--y so each wire emanates straight from its card; the player
+     shrinks and the light packets do the "flowing into the box" (cards hold). */
+  position: absolute; left: var(--x); top: var(--y);
+  transform: translate(-50%, -50%) scale(calc(1 - (.04 * var(--flow))));
   display: inline-flex; align-items: center; gap: 10px;
   padding: 8px 14px 8px 9px; border-radius: 14px;
   background: linear-gradient(150deg, rgba(20,24,32,.94), rgba(9,11,16,.94));
