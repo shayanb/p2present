@@ -136,39 +136,95 @@ strings; the defaults below apply when a var is absent.
 
 ---
 
-## <a id="make-permanent"></a>Wiring the "Make permanent" button (payment hooks)
+## <a id="make-permanent"></a>The "Make permanent" payment rail (Stripe)
 
 The Host page's **arweave** provider offers pay-once **permanent** storage. When
 the author supplies their own Arweave upload endpoint + credits, no payment is
-needed — the file uploads directly. But to offer a **"Make permanent 💎"** button
-that *charges* the author and funds the upload for them, you wire a **payment
-hook**. p2present ships the boundary, not the keys (it is a static site — there
-are **no secrets in the repo**).
+needed — the file uploads directly. To offer a **"Make permanent 💎"** button that
+*charges* the author and funds the upload for them, p2present ships a complete
+**Stripe rail**: a sibling Cloudflare Worker
+([`service/src/payments-worker.js`](service/src/payments-worker.js)) plus a
+client adapter that the static site loads only when you point it at that Worker.
+There are **no keys in the repo** — Stripe's secret key and webhook secret live
+as Worker secrets, never in `docs/`.
 
-The hook lives in [`docs/src/persist/payments.js`](docs/src/persist/payments.js).
-Until configured, `makePermanent()` throws `PaymentNotConfiguredError`, which the
-Host page surfaces as an actionable note (not a crash). To wire a real flow,
-inject one or both adapters **before** the page scripts run:
+### End-to-end flow
+
+```
+Host page  "Make permanent 💎"
+  1. POST  <payments>/api/pay/checkout  { provider, bytes, name, returnUrl }
+  2. Worker prices the upload, creates a Stripe Checkout Session, parks a
+     job:<id> in KV (status=awaiting_payment), returns { jobId, url }
+  3. Browser redirects to Stripe Checkout (Stripe.js not even required — it is
+     a hosted redirect; the adapter can also confirm a PaymentIntent if you swap
+     to an embedded flow).
+  4. Author pays. Stripe POSTs  <payments>/api/pay/webhook  (signed).
+  5. Worker verifies the signature, marks the job paid, and calls the deploy/
+     control API  POST {PERSIST_CONTROL_URL}/jobs  → it funds the Arweave upload
+     / pins to IPFS / seeds the torrent, returns a permanent ref (ar:// / ipfs://).
+  6. Stripe sends the browser back to  returnUrl?p2pay=success&job=<id>.
+     The Host page polls  <payments>/api/pay/result?jobId=<id>  until the ref is
+     ready, then reflects it into the "Hosted references" list → Builder handoff.
+```
+
+Where the **bytes** go: the author stages the file with the control API (see
+[`deploy/`](deploy/README.md)) before/at checkout; the webhook only authorises
+the *persist* of an already-staged job. The Worker never proxies large uploads.
+
+### Deploy the payments Worker
+
+```bash
+cd service
+
+# 1. KV namespace for payment jobs (prod + preview); paste the ids into
+#    wrangler.payments.toml → [[kv_namespaces]].
+npx wrangler kv namespace create P2_PAY_KV           --config wrangler.payments.toml
+npx wrangler kv namespace create P2_PAY_KV --preview --config wrangler.payments.toml
+
+# 2. Stripe TEST-mode secrets (never committed). Keys: dashboard → Developers →
+#    API keys. Webhook secret: see step 4.
+npx wrangler secret put STRIPE_SECRET_KEY     --config wrangler.payments.toml   # sk_test_…
+npx wrangler secret put STRIPE_WEBHOOK_SECRET --config wrangler.payments.toml   # whsec_…
+
+# 3. (optional) the deploy/ control API the webhook drives:
+npx wrangler secret put PERSIST_CONTROL_TOKEN --config wrangler.payments.toml
+#    and set PERSIST_CONTROL_URL in wrangler.payments.toml [vars].
+
+# 4. Run it. For the webhook secret, forward Stripe events locally with the CLI:
+npx wrangler dev --config wrangler.payments.toml          # http://127.0.0.1:8787
+stripe listen --forward-to http://127.0.0.1:8787/api/pay/webhook   # prints whsec_…
+
+npx wrangler deploy --config wrangler.payments.toml       # → your payments base URL
+```
+
+Then register the production webhook in the Stripe dashboard pointing at
+`<payments>/api/pay/webhook` (event `checkout.session.completed`) and copy its
+signing secret into `STRIPE_WEBHOOK_SECRET`. Local config lives in `.dev.vars`
+(gitignored — copy [`.dev.vars.example`](service/.dev.vars.example)).
+
+### Point the Host page at it
+
+The client resolves a **payments base URL** like the Save-&-share service base
+(first match wins): `?payments=<base>` · `window.__P2_PAYMENTS_BASE` ·
+`<meta name="p2present:payments" content="…">` · `localStorage['p2present:payments']`.
+For a fork, the simplest is a `<meta>` tag in `docs/host/index.html`:
 
 ```html
-<!-- in docs/host/index.html <head>, before host.js -->
+<meta name="p2present:payments" content="https://p2present-payments.<account>.workers.dev" />
+```
+
+With a base configured, the **"Make permanent 💎"** button runs the real flow
+above. With **none** configured, `makePermanent()` throws
+`PaymentNotConfiguredError` and the Host page surfaces the actionable
+"payment not configured" note — exactly the static-build default. You can still
+override the rail entirely by injecting your own adapters before the page scripts:
+
+```html
 <script>
 window.__P2_PAYMENTS = {
-  // Fiat via Stripe — handled by YOUR server.
-  async stripe({ file, onProgress }) {
-    onProgress?.('Opening checkout…');
-    const { url } = await fetch('/api/quote', {           // your endpoint
-      method: 'POST', body: JSON.stringify({ bytes: file.size }),
-    }).then((r) => r.json());
-    // redirect to Stripe Checkout (or confirm a PaymentIntent); your webhook then
-    // funds an Arweave/Irys upload and records a credit id.
-    location.href = url;
-    return { receipt: '<credit-id-from-your-server>' };
-  },
-  // On-chain rent — a wallet pays the storage node directly.
-  async onchain({ file }) {
-    const price = await irys.getPrice(file.size);          // your bundler SDK
-    const tx = await irys.fund(price);                     // wallet signs
+  async onchain({ file }) {                 // on-chain rent (see CRYPTO-PAYMENTS.md)
+    const price = await irys.getPrice(file.size);
+    const tx = await irys.fund(price);      // wallet signs
     return { receipt: tx.id };
   },
 };
@@ -176,26 +232,28 @@ window.__P2_PAYMENTS = {
 ```
 
 **Adapter contract.** Each adapter receives `{ provider, file, onProgress }` and
-returns `{ receipt }` once the upload is funded. `makePermanent()` prefers
-`onchain` when both are present (override per call with `method`). A wired
-deployment continues from the receipt to the actual upload; the **TODO markers**
-in `payments.js` (`TODO(payments)`) show exactly where each rail plugs in. Keep
-all keys server-side / in the wallet — never in the committed site.
+returns `{ receipt }` once funded; the Stripe adapter redirects and is resumed by
+`resumePendingPermanent()` on return. `makePermanent()` prefers `onchain` when
+both are present (override per call with `method`). Keep all keys server-side / in
+the wallet — never in the committed site.
 
 > The two concerns are independent: the **upload endpoint** (where bytes go) is
-> the arweave provider's config; the **payment hook** (who pays) is
-> `window.__P2_PAYMENTS`. Configure the endpoint for self-funded uploads, the
-> hook for a paid button, or both.
+> the arweave provider's config; the **payment rail** (who pays) is the payments
+> Worker. Configure the endpoint for self-funded uploads, the Worker for a paid
+> button, or both. The on-chain rail is designed but not implemented — see
+> [CRYPTO-PAYMENTS.md](CRYPTO-PAYMENTS.md).
 
 ---
 
 ## Tests
 
-The handler logic is covered by unit tests against a Map-backed mock KV (no
-network, no real Cloudflare):
+Both Workers' handler logic is covered by unit tests against a Map-backed mock
+KV and a stubbed Stripe + control API (no network, no real Cloudflare):
 
 ```bash
 cd service && npm test          # node --test "test/*.test.mjs"
+# → pastebin handlers (worker.test.mjs) + the payments rail (payments.test.mjs):
+#   pricing, checkout, webhook signature verify, payment→persist, idempotency.
 ```
 
 The repository's top-level `npm test` runs these alongside the app's unit tests,

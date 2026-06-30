@@ -719,6 +719,7 @@ body.p2-maximized { overflow: hidden; }
 
 @media (max-width: 820px) {
   .p2-stage:not([data-mode="overlap"]) .p2-pane { flex-basis: 0; }
+  .p2-controls { flex-wrap: wrap; gap: 8px; }
 
   /* Full-bleed: trim chrome so the player owns the viewport. */
   .p2-header {
@@ -745,27 +746,30 @@ body.p2-maximized { overflow: hidden; }
   .p2-source { grid-template-columns: minmax(0, 1fr) auto; }
   .p2-status { top: 60px; right: 8px; width: min(390px, calc(100vw - 16px)); }
 
-  .p2-controls { flex-wrap: wrap; gap: 8px; }
+  /* Two clean rows: the scrubber owns the top row full-width; every button
+     centres on the row below (no stranded controls). Flex wraps gracefully
+     instead of a brittle fixed-column grid. */
   .p2-player.p2-floating-controls .p2-controls {
-    display: grid;
-    grid-template-columns: auto auto 1fr auto auto auto auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
     width: calc(100% - 14px - env(safe-area-inset-left) - env(safe-area-inset-right));
     bottom: max(7px, env(safe-area-inset-bottom));
-    padding: 8px;
+    padding: 10px;
     border-radius: 16px;
-    gap: 7px;
+    gap: 8px;
   }
   .p2-player.p2-floating-controls .p2-btn,
   .p2-player.p2-floating-controls .p2-speed {
     min-width: 38px; min-height: 38px; padding: 7px 8px;
   }
-  .p2-scrub { grid-column: 1 / -1; order: 10; flex-basis: 100%; width: 100%; min-width: 0; }
+  .p2-scrub { order: -1; flex: 0 0 100%; width: 100%; min-width: 0; margin-bottom: 2px; }
   .p2-time { font-size: 11px; }
   .p2-slidecount { display: none; }
   .p2-link { display: none; }
   .p2-spacer { display: none; }
-  .p2-layout-group { order: 11; margin-left: auto; padding: 0; border: 0; background: transparent; }
+  .p2-layout-group { padding: 0; border: 0; background: transparent; }
   .p2-group-label { display: none; }
 }
 

@@ -1,0 +1,125 @@
+# deploy/docker-compose.yml — p2present persistence backends.
+#
+# The stack the Stripe webhook (service/src/payments-worker.js) drives after a
+# "Make permanent" payment. Plain-Docker; runs identically on a Hetzner Cloud or
+# DigitalOcean droplet (see README.md). Persistent state lives in NAMED VOLUMES
+# so it survives `docker compose down` / container restarts.
+#
+#   control   — the API the Worker calls (POST /jobs) + the client stages files to
+#   seed      — WebTorrent seeder: turns a staged file into a magnet: ref
+#   ipfs      — kubo node: `ipfs add` + pin a staged file → ipfs:// ref
+#   caddy     — TLS reverse proxy; the ONLY service exposed to the internet (443)
+#
+# Copy .env.example → .env and fill it in before `docker compose up -d`.
+
+name: p2present-persist
+
+networks:
+  # Internal-only network: kubo's API (5001) and the seed/control APIs are NOT
+  # published to the host — only Caddy (and the public swarm ports) are.
+  edge:
+  internal:
+    internal: true
+
+volumes:
+  ipfs-data:        # kubo repo (pinned blocks live here — back this up)
+  seed-data:        # torrent storage (seeded files + resume state)
+  staging-data:     # incoming uploads staged by the client before payment
+  control-data:     # control API job database (jobId → ref)
+  caddy-data:       # Caddy TLS certificates (ACME) — back this up
+  caddy-config:
+
+services:
+  control:
+    build: ./control
+    image: p2present/control:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      CONTROL_PORT: "8090"
+      IPFS_API_URL: "http://ipfs:5001"
+      SEED_API_URL: "http://seed:8091"
+      IPFS_GATEWAY_PUBLIC: "${IPFS_GATEWAY_PUBLIC:-https://ipfs.io}"
+      STAGING_DIR: "/staging"
+      DATA_DIR: "/data"
+    volumes:
+      - staging-data:/staging
+      - control-data:/data
+    networks: [internal]
+    depends_on:
+      ipfs:
+        condition: service_healthy
+      seed:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8090/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  seed:
+    build: ./seed
+    image: p2present/seed:local
+    restart: unless-stopped
+    environment:
+      SEED_PORT: "8091"
+      # WebRTC (wss://) trackers so the in-browser player can reach this seeder.
+      TRACKERS: "${TRACKERS:-wss://tracker.openwebtorrent.com,wss://tracker.webtorrent.dev}"
+      STAGING_DIR: "/staging"
+      SEED_DIR: "/seed"
+    volumes:
+      - staging-data:/staging
+      - seed-data:/seed
+    networks: [internal, edge]
+    # Classic BitTorrent peer ports (WebRTC peers connect via the trackers above).
+    ports:
+      - "6881:6881/tcp"
+      - "6881:6881/udp"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8091/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  ipfs:
+    image: ipfs/kubo:v0.30.0
+    restart: unless-stopped
+    environment:
+      # Bind the API to all interfaces *inside* the container; it is only
+      # reachable on the internal docker network (never published to the host).
+      IPFS_PROFILE: "server"
+    volumes:
+      - ipfs-data:/data/ipfs
+      - staging-data:/staging:ro
+    networks: [internal, edge]
+    # Only the swarm port is public (peer connectivity). API (5001) + gateway
+    # (8080) stay on the docker networks; Caddy proxies the gateway if you want
+    # a public read gateway.
+    ports:
+      - "4001:4001/tcp"
+      - "4001:4001/udp"
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    env_file: .env
+    cap_add: [NET_BIND_SERVICE]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [internal, edge]
+    depends_on:
+      - control

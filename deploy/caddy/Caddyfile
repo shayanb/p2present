@@ -1,0 +1,47 @@
+# deploy/caddy/Caddyfile — TLS reverse proxy for the control API.
+#
+# Caddy fetches + renews a Let's Encrypt certificate automatically (certs persist
+# in the caddy-data named volume). It is the ONLY service exposed to the internet
+# (443). The control API, the seed HTTP API, and the kubo API stay on the
+# internal docker network.
+#
+# {$CONTROL_DOMAIN} and {$ACME_EMAIL} are read from the .env file (env_file in
+# docker-compose.yml). Set them before `docker compose up -d`.
+
+{
+	email {$ACME_EMAIL}
+	# For first-time / staging tests, uncomment to avoid Let's Encrypt rate limits:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# --- control API (the payments webhook → POST /jobs; browser → POST /stage) ---
+{$CONTROL_DOMAIN} {
+	encode zstd gzip
+
+	# Reasonable upload ceiling for staged assets (match control MAX_BYTES).
+	request_body {
+		max_size 2GB
+	}
+
+	reverse_proxy control:8090 {
+		health_uri /healthz
+		health_interval 30s
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+# --- OPTIONAL: a public read-only IPFS gateway for ipfs:// refs ---------------
+# Uncomment and set GATEWAY_DOMAIN in .env to serve pinned content over HTTPS.
+# {$GATEWAY_DOMAIN} {
+# 	reverse_proxy ipfs:8080
+# }

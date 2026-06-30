@@ -14,6 +14,7 @@ import {
 import {
   persistProviders, DEFAULT_PERSIST_PROVIDER, PaymentNotConfiguredError,
 } from '../docs/src/persist/index.js';
+import { makePermanent, defaultStripeAdapter } from '../docs/src/persist/payments.js';
 import { normaliseManifest } from '../docs/src/manifest.js';
 import { SyncEngine } from '../docs/src/sync.js';
 import { validate } from '../docs/src/schema-validate.js';
@@ -453,6 +454,44 @@ test('arweave: a wired payment rail funds, but still needs an endpoint to spend 
   const err = await provider('arweave', {}, { payments }).put(aFile()).then(() => null, (e) => e);
   assert.ok(err instanceof PaymentNotConfiguredError);
   assert.match(err.message, /upload endpoint/i);
+});
+
+// --- payments adapter boundary ----------------------------------------------
+test('makePermanent: injected stripe adapter funds + returns a receipt', async () => {
+  const adapters = { stripe: async ({ provider }) => ({ receipt: `rc_${provider}`, jobId: 'job1' }) };
+  const out = await makePermanent({ provider: 'arweave', file: aFile(), adapters });
+  assert.equal(out.method, 'stripe');
+  assert.equal(out.receipt, 'rc_arweave');
+  assert.equal(out.jobId, 'job1');
+});
+test('makePermanent: prefers onchain when both rails are present; method overrides', async () => {
+  const adapters = { onchain: async () => ({ receipt: 'chain' }), stripe: async () => ({ receipt: 'fiat' }) };
+  assert.equal((await makePermanent({ file: aFile(), adapters })).receipt, 'chain');
+  assert.equal((await makePermanent({ file: aFile(), method: 'stripe', adapters })).receipt, 'fiat');
+});
+test('makePermanent: no rail → PaymentNotConfiguredError', async () => {
+  const err = await makePermanent({ file: aFile(), adapters: {} }).then(() => null, (e) => e);
+  assert.ok(err instanceof PaymentNotConfiguredError, String(err));
+});
+test('defaultStripeAdapter: POSTs checkout + returns the jobId (no DOM → no redirect)', async () => {
+  let seen;
+  const fetch = async (url, init) => {
+    seen = { url, body: JSON.parse(init.body) };
+    return fakeRes({ json: { jobId: 'job_42', url: 'https://checkout.stripe.com/c/x', amount: 220 } });
+  };
+  const stripe = defaultStripeAdapter('https://pay.example', { fetch });
+  const out = await stripe({ provider: 'arweave', file: aFile('talk.mp4') });
+  assert.match(seen.url, /\/api\/pay\/checkout$/);
+  assert.equal(seen.body.provider, 'arweave');
+  assert.equal(seen.body.name, 'talk.mp4');
+  assert.equal(out.receipt, 'job_42');
+  assert.equal(out.jobId, 'job_42');
+});
+test('defaultStripeAdapter: surfaces a 501 as PaymentNotConfiguredError', async () => {
+  const fetch = async () => ({ ok: false, status: 501, json: async () => ({ error: 'not_configured' }) });
+  const stripe = defaultStripeAdapter('https://pay.example', { fetch });
+  const err = await stripe({ provider: 'arweave', file: aFile() }).then(() => null, (e) => e);
+  assert.ok(err instanceof PaymentNotConfiguredError, String(err));
 });
 
 test('seedbox: in-tab seed → magnet ref; seedbox URL marks it always-on', async () => {

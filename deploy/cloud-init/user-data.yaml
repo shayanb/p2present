@@ -1,0 +1,66 @@
+#cloud-config
+# deploy/cloud-init/user-data.yaml — provisions a plain Docker host and brings up
+# the p2present persistence stack. Works on ANY cloud-init distro (Ubuntu 22.04+
+# / Debian 12) — tested-shape for Hetzner Cloud and DigitalOcean droplets.
+#
+# It does NOT contain secrets. After first boot, copy the repo's deploy/ dir up,
+# create deploy/.env from .env.example, and run `docker compose up -d` (the
+# runcmd below attempts it if /opt/p2present/deploy already exists, e.g. when you
+# bake the repo into a snapshot or git-clone in a later step).
+#
+# Persistence: mount your provider's block-storage volume at /var/lib/docker so
+# named volumes (ipfs-data, seed-data, caddy-data, …) live on durable storage —
+# see the mounts section and deploy/README.md.
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - git
+  - ufw
+
+# --- firewall: only SSH, HTTP/S, and the p2p swarm ports --------------------
+runcmd:
+  # Install Docker Engine + compose plugin from the official repo.
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+  - apt-get update -y
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  - systemctl enable --now docker
+
+  # Firewall: SSH + TLS + p2p (4001 IPFS swarm, 6881 BitTorrent peers).
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow 443/udp
+  - ufw allow 4001
+  - ufw allow 6881
+  - ufw --force enable
+
+  # If the deploy/ directory is already present (snapshot / git clone) AND a .env
+  # exists, bring the stack up. Otherwise this is a no-op — finish setup manually.
+  - 'test -f /opt/p2present/deploy/.env && cd /opt/p2present/deploy && docker compose up -d --build || echo "deploy/.env not found — upload deploy/ + create .env, then: docker compose up -d"'
+
+# --- OPTIONAL: put Docker data on an attached block-storage volume ----------
+# Uncomment and set device to your provider's volume (Hetzner: /dev/sdb,
+# DigitalOcean: /dev/disk/by-id/scsi-0DO_Volume_<name>). This keeps all named
+# volumes on durable storage that survives droplet rebuilds.
+# disk_setup:
+#   /dev/sdb:
+#     table_type: gpt
+#     layout: true
+# fs_setup:
+#   - device: /dev/sdb
+#     partition: auto
+#     filesystem: ext4
+# mounts:
+#   - [ /dev/sdb1, /var/lib/docker, ext4, "defaults,nofail", "0", "2" ]
+
+final_message: "p2present persistence host is up after $UPTIME seconds."

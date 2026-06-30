@@ -12,7 +12,7 @@
 
 import {
   persistProviders, listPersistProviders, DEFAULT_PERSIST_PROVIDER,
-  PaymentNotConfiguredError,
+  PaymentNotConfiguredError, resumePendingPermanent,
 } from '../src/persist/index.js';
 import { getWebTorrentClient, DEFAULT_WEBTORRENT_TRACKERS } from '../src/resolve.js';
 
@@ -271,6 +271,44 @@ function init() {
   $('hosted-clear').addEventListener('click', () => { try { localStorage.removeItem(HOSTED_KEY); } catch {} renderHosted(); });
 
   renderHosted();
+  resumeAfterCheckout();
+}
+
+// After a Stripe "Make permanent" redirect, the browser returns here with
+// ?p2pay=…&job=… — poll the payments Worker for the resulting permanent ref and
+// reflect it into the hosted list (the Builder handoff). No-op when there is no
+// payment to resume, so the default (unconfigured) build is unaffected.
+async function resumeAfterCheckout() {
+  let res;
+  try {
+    res = await resumePendingPermanent({ onProgress: (m) => setStatus(m, 'is-note') });
+  } catch (err) {
+    setStatus(`Could not finalize permanent storage: ${err.message || err}`, 'is-error');
+    return;
+  }
+  if (!res) return;                       // nothing to resume — normal load
+  if (res.status === 'persisted' && res.ref) {
+    setStatus('Stored permanently ✓ — reference added below.', 'is-ok');
+    showResult({ ref: res.ref, scheme: res.scheme || 'ar', name: res.name, permanent: true });
+    addHosted({ kind: res.scheme || 'ar', ref: res.ref, name: res.name || 'permanent asset' });
+  } else if (res.status === 'cancelled') {
+    setStatus('Checkout cancelled — no charge was made.', 'is-note');
+  } else if (res.status === 'paid_pending_backend') {
+    setStatus('Payment received ✓. Persistence backend is not yet configured on this ' +
+      'service — your reference will appear once an operator fulfils it.', 'is-note');
+  } else if (res.status === 'no_base') {
+    setStatus('Returned from checkout but no payments service is configured to read the result.', 'is-note');
+  } else {
+    setStatus(`Payment finalizing (status: ${res.status}). Reload in a moment to pick up the reference.`,
+      res.status === 'paid_backend_error' ? 'is-error' : 'is-note');
+  }
+}
+
+function setStatus(msg, cls) {
+  const el = $('persist-status');
+  if (!el) return;
+  el.className = 'p2-status-line' + (cls ? ' ' + cls : '');
+  el.textContent = msg;
 }
 
 init();

@@ -1,0 +1,6 @@
+# Never commit the real environment or any local secrets.
+.env
+*.env
+!.env.example
+node_modules/
+*.log

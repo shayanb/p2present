@@ -1,0 +1,52 @@
+# wrangler.payments.toml — p2present "Make permanent" payments Worker.
+#
+# A SIBLING worker to the pastebin-lite worker (wrangler.toml / src/worker.js).
+# Deploy it separately:
+#   npx wrangler deploy   --config wrangler.payments.toml
+#   npx wrangler dev      --config wrangler.payments.toml
+#
+# No secrets live in this file. Set them out-of-band (or in .dev.vars locally):
+#   npx wrangler secret put STRIPE_SECRET_KEY      --config wrangler.payments.toml
+#   npx wrangler secret put STRIPE_WEBHOOK_SECRET  --config wrangler.payments.toml
+#   npx wrangler secret put PERSIST_CONTROL_TOKEN  --config wrangler.payments.toml
+#
+# Create the KV namespace first and paste its ids below:
+#   npx wrangler kv namespace create P2_PAY_KV           --config wrangler.payments.toml
+#   npx wrangler kv namespace create P2_PAY_KV --preview --config wrangler.payments.toml
+
+name = "p2present-payments"
+main = "src/payments-worker.js"
+compatibility_date = "2024-11-01"
+
+# --- KV: stores payment jobs + webhook idempotency markers ------------------
+[[kv_namespaces]]
+binding = "P2_PAY_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_YOUR_PREVIEW_KV_NAMESPACE_ID"
+
+# --- public (non-secret) config ---------------------------------------------
+[vars]
+# CORS origin allowed to call the API ("*" = any; tighten to your app origin).
+ALLOW_ORIGIN = "*"
+# Where the browser returns after checkout (the Host page). Used when the client
+# does not pass an explicit returnUrl, and as the trusted fallback.
+APP_BASE = "https://ibeezhan.github.io/p2present/host/"
+# Optional allow-list of origins a client returnUrl may use (comma-separated).
+# Leave unset to accept any http(s) returnUrl.
+# ALLOW_RETURN_ORIGINS = "https://ibeezhan.github.io"
+
+# The deploy/ control API the webhook calls to actually persist the asset after
+# payment. Unset → payment still succeeds, job is parked as paid_pending_backend.
+# PERSIST_CONTROL_URL = "https://control.example.com/"
+
+# Pricing (smallest currency unit; all optional — defaults shown).
+CURRENCY = "usd"
+PRICE_BASE_CENTS = "100"       # $1.00 flat fee per upload
+PRICE_PER_MIB_CENTS = "12"     # $0.12 per MiB
+PRICE_MIN_CENTS = "100"        # never charge less than $1.00
+MAX_BYTES = "2147483648"       # 2 GiB upload cap
+
+# --- secrets (set via `wrangler secret put`, never here) --------------------
+# STRIPE_SECRET_KEY        sk_test_… / sk_live_…
+# STRIPE_WEBHOOK_SECRET    whsec_…   (from `stripe listen` or the dashboard)
+# PERSIST_CONTROL_TOKEN    bearer token the control API checks

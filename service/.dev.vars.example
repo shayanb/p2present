@@ -10,3 +10,21 @@
 # Override the player redirect target / CORS origin if needed:
 # APP_BASE=http://127.0.0.1:5173/app/
 # ALLOW_ORIGIN=*
+
+# ---------------------------------------------------------------------------
+# Payments worker (src/payments-worker.js, deployed with wrangler.payments.toml)
+# ---------------------------------------------------------------------------
+# Stripe test-mode keys — from https://dashboard.stripe.com/test/apikeys and the
+# webhook signing secret printed by `stripe listen --forward-to ...`.
+# NEVER commit real values; copy this file to .dev.vars (gitignored) to fill in.
+# STRIPE_SECRET_KEY=sk_test_xxx
+# STRIPE_WEBHOOK_SECRET=whsec_xxx
+#
+# The deploy/ control API the webhook calls to actually persist after payment:
+# PERSIST_CONTROL_URL=http://127.0.0.1:8090/
+# PERSIST_CONTROL_TOKEN=dev-control-token
+#
+# Pricing / limits overrides (optional — defaults live in the worker):
+# CURRENCY=usd
+# PRICE_BASE_CENTS=100
+# PRICE_PER_MIB_CENTS=12

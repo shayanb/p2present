@@ -1,0 +1,16 @@
+{
+  "name": "p2present-seed",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Always-on WebTorrent seeder: turns a staged file into a magnet: reference and keeps seeding it across restarts.",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "webtorrent": "^2.4.1"
+  },
+  "license": "MIT"
+}

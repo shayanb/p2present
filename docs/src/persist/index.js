@@ -25,7 +25,7 @@ import { SeedboxProvider } from './seedbox.js';
 import { HttpsProvider } from './s3.js';
 
 export { BasePersistenceProvider };
-export { makePermanent, PaymentNotConfiguredError } from './payments.js';
+export { makePermanent, PaymentNotConfiguredError, resumePendingPermanent, paymentsBase } from './payments.js';
 
 export const persistProviders = new Registry('persistence provider');
 // Order = display order in the host picker. Arweave (permanent) is the DEFAULT.

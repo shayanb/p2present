@@ -1,0 +1,13 @@
+{
+  "name": "p2present-control",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Control API the p2present payments webhook calls to persist a paid asset (IPFS pin / WebTorrent seed / Arweave bundler).",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "license": "MIT"
+}

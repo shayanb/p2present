@@ -19,8 +19,9 @@ These are load-bearing. Don't violate them without an explicit decision from Sha
 
 1. **Static-first. No server runtime in the core.** Everything in `docs/` must
    run as plain files served by GitHub Pages. No bundler, no build step, no
-   framework. The only backend (`service/`) is an *optional* Cloudflare Worker for
-   the "Save & share" pastebin — the app must fully work without it.
+   framework. The backends (`service/` — the "Save & share" pastebin Worker and
+   the sibling "Make permanent" payments Worker — and `deploy/` — the persistence
+   stack) are all *optional*; the app must fully work with each unconfigured.
 2. **Open core, free forever.** The player, format, Builder, Host helper, and
    self-hosting are MIT and always free. You pay only to *persist* a talk beyond
    your own machine or to *verify* its identity — never to use the software.
@@ -57,7 +58,12 @@ docs/                     ← the entire static app (this is what Pages serves)
     transitions/ {cut,fade,slide,none}.js + index.js
     persist/  {arweave,pinning,seedbox,s3}.js + payments.js + base.js + index.js
     crypto/   secp256k1 keccak ens base64url   (for EIP-191 verify + ENS names)
-service/                  ← OPTIONAL Cloudflare Worker + KV (Save & share). Not core.
+service/                  ← OPTIONAL Workers + KV. Not core.
+  src/worker.js                      Save & share pastebin (v1)
+  src/payments-worker.js             "Make permanent" Stripe rail (wrangler.payments.toml)
+  test/*.test.mjs                    unit tests (mock KV + stubbed Stripe/control)
+deploy/                   ← OPTIONAL self-hostable persistence stack (the webhook drives).
+  docker-compose.yml control/ seed/ caddy/ cloud-init/ terraform/   config only
 scripts/  test.mjs  smoke.mjs  import-chapters.mjs
 *.md      README SPEC ROADMAP AUTHORING HOSTING SERVICE DOCS
 ```
@@ -95,7 +101,7 @@ verify visible changes on the live demo URL too.
 - Keep `SPEC.md` and `docs/p2present.schema.json` in lockstep when the manifest
   format changes.
 
-## Status (as of 2026-06-27, main @ recent)
+## Status (as of 2026-06-30, branch @ feat/v2-paid-rail)
 
 **Done (Phases 2→13):** synced bidirectional player; YouTube/MP4/IPFS/WebTorrent
 sources with ordered fallback; HTML/PDF/embed decks; subtitles; layout modes;
@@ -106,17 +112,31 @@ persistence layer** (Arweave/IPFS-pinning/seedbox/S3, v2 layer); Phase 13 app-UX
 polish (paused-seek YouTube slider, centered START overlay, unfolding layout
 button, sources→player animation) + a header-UX refinement on top.
 
+**v2 paid rail — Stripe shipped (this branch):** the **"Make permanent" payment
+hook is now a real Stripe rail**, not a stub:
+- **Server:** a sibling Cloudflare Worker `service/src/payments-worker.js`
+  (deployed via `wrangler.payments.toml`) — `/api/pay/checkout` (Stripe Checkout
+  Session), a signature-verified `/api/pay/webhook` that triggers the actual
+  persistence via the `deploy/` control API, and `/api/pay/result` to poll the
+  resulting `ar://`/`ipfs://` ref. Keys are wrangler secrets; tests in
+  `service/test/payments.test.mjs`.
+- **Client:** `docs/src/persist/payments.js` gains a default Stripe adapter wired
+  to a resolved payments base URL + `resumePendingPermanent()`; degrades to the
+  "payment not configured" note when unset (smoke still green). See
+  `SERVICE.md → Make permanent`.
+- **DevOps:** `deploy/` — docker-compose stack (control API + WebTorrent seed +
+  kubo IPFS + Caddy TLS), named volumes, cloud-init, Hetzner/DO notes, Terraform
+  skeleton. Config only; nothing provisioned, no credentials committed.
+
 **Open / next (see ROADMAP.md):**
-1. **v2 paid rail (the main remaining engineering chunk).** The persistence
-   *providers* work, but the **"Make permanent" payment hook** is stubbed —
-   `docs/src/persist/payments.js` defines the Stripe (fiat) + on-chain-rent adapter
-   boundary but ships no keys. Wiring a live charge → fund-an-Arweave-upload flow
-   is the work. See `SERVICE.md → Make permanent`.
+1. **On-chain "rent" crypto rail** — the second `payments.js` adapter. **Designed,
+   not implemented:** `docs/CRYPTO-PAYMENTS.md` (wallet connect, chains/tokens, how
+   a confirmed on-chain payment funds the same persistence as the Stripe webhook).
 2. **`filecoin` persistence provider** — register a new provider for cold,
    verifiable storage deals.
 3. **v3 registry** — ENS CCIP-Read (ERC-3668 gasless resolution) + EAS
    attestations so a shared link can *prove* who published it; ties back to the
-   v1.1 signing key. Roadmap only, nothing started.
+   v1.1 signing key (design sketched in `docs/CRYPTO-PAYMENTS.md §6`).
 
 ## Where to read next
 
