@@ -12,7 +12,9 @@ presentation slides in sync with the talk video — see the
 | **[AUTHORING.md](AUTHORING.md)** | Make a presentation start-to-finish: slides → host assets → build the manifest → share. |
 | **[HOSTING.md](HOSTING.md)** | Where to put your assets — via pluggable persistence providers: plain URLs / S3, Arweave (`ar://`, pay-once permanent), IPFS pinning, WebTorrent seedbox — and how each maps to a manifest entry. |
 | **[SERVICE.md](SERVICE.md)** | The optional "Save & share" backend: deploy a Cloudflare Worker + KV that hosts manifests behind short `…/p/<id>` links; configure the app; optional IPFS mirror; **wiring the "Make permanent" payment hook** (Stripe / on-chain rent). |
+| **[CRYPTO-PAYMENTS.md](docs/CRYPTO-PAYMENTS.md)** | Design (planned, not implemented) for the **on-chain pay-once rail** as a second `payments.js` adapter — wallet connect, chains/tokens, how a confirmed payment funds the same persistence as the Stripe webhook — and its tie to the v3 ENS CCIP-Read + EAS registry. |
 | **[SPEC.md](SPEC.md)** | The canonical `p2present.json` v1.0 reference: every field, source transports, loading/share formats, deep-links, validation. |
+| **[deploy/](deploy/README.md)** | Self-hostable persistence backends (WebTorrent seedbox + IPFS pinning + the control API the payments webhook drives): docker-compose, cloud-init, Hetzner/DigitalOcean notes, backup + cost. |
 | **[JSON Schema](docs/p2present.schema.json)** | Machine-readable manifest schema (draft-07) for validation. |
 
 ## Apps (on the live site)

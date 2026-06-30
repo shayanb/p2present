@@ -73,10 +73,16 @@ video providers) chosen per upload — **shipped in Phase 9**:
 
 - The Host page builds its UI from the registry; each provider turns a file into
   a reference, with tokens kept only in the browser.
-- **What's pending:** the **"Make permanent" payment hook** — `docs/src/persist/payments.js`
-  defines the Stripe (fiat) and on-chain-rent adapter boundary, but ships no keys.
-  Wiring a live rail (so a hosted button can charge + fund an Arweave upload for
-  the author) is the remaining v2 work. See [SERVICE.md → Make permanent](SERVICE.md#make-permanent).
+- **Shipped since:** the **Stripe "Make permanent" rail** is now real — a sibling
+  Cloudflare Worker (`service/src/payments-worker.js`) creates a Checkout Session,
+  verifies the webhook, and funds the actual persistence via the
+  [`deploy/`](deploy/README.md) control API; the client reflects the resulting
+  `ar://` / `ipfs://` reference back into the manifest. Ships no keys (Worker
+  secrets). See [SERVICE.md → Make permanent](SERVICE.md#make-permanent).
+- **Still pending:** the **on-chain "rent" rail** (the second `payments.js`
+  adapter) is designed but not implemented — wallet-funded, permissionless
+  permanence mirroring the Stripe boundary. Design in
+  [docs/CRYPTO-PAYMENTS.md](docs/CRYPTO-PAYMENTS.md).
 
 **Why:** this is the one thing you genuinely *can't* get for free — durable hosting
 when your machine is offline. Pay only for what persists.
@@ -97,6 +103,10 @@ Human-readable, verifiable identities for talks and speakers.
 
 **Why:** so a shared link can *prove* who published it — "this really is that
 speaker's talk" — without a central authority.
+
+The registry composes with the on-chain payment rail (a confirmed payment can
+co-issue the EAS attestation that vouches the manifest) — see the design in
+[docs/CRYPTO-PAYMENTS.md → Tie-in to the v3 registry](docs/CRYPTO-PAYMENTS.md).
 
 ---
 
