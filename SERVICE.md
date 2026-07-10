@@ -75,6 +75,30 @@ Add your domain to Cloudflare, then uncomment the `routes` block in
 (GitHub Pages, Cloudflare Pages, etc.). Redeploy. Now `https://yourdomain/p/<id>`
 links work end to end.
 
+### Troubleshooting: Cloudflare + GitHub Pages DNS / SSL
+
+Worker routes only fire on **proxied** (orange-cloud) hostnames — so if the
+static player is GitHub Pages behind the same domain, the DNS records must be
+proxied, and that changes how SSL works. The setup that works (and what
+p2present.com runs):
+
+- **Apex** → the four GitHub Pages A records (`185.199.108.153`–`111.153`),
+  **proxied**. **`www`** → CNAME `<you>.github.io`, proxied too if you use it.
+- **Cloudflare SSL/TLS mode: “Full”** — not “auto”/“Flexible” (redirect loops
+  with Pages) and not “Full (strict)” (GitHub can’t provision a cert for your
+  domain while proxied, so strict fails the origin handshake). Visitors get
+  Cloudflare’s edge cert; Cloudflare→GitHub rides GitHub’s `*.github.io` cert.
+- Turn on Cloudflare’s **“Always Use HTTPS”** — it replaces GitHub’s
+  “Enforce HTTPS” checkbox, which never appears in this setup.
+- **Expect GitHub Pages to warn** (`InvalidCNAMEError` / “improperly
+  configured”): its DNS check sees Cloudflare’s IPs instead of its own. With
+  the proxy on, that warning is **cosmetic** — the site serves fine.
+
+If you *don’t* need Worker routes on the domain (e.g. the Worker lives on
+`workers.dev` or its own subdomain like `api.<domain>`), the simpler setup is
+grey-cloud (**DNS only**) records: GitHub then verifies the domain, provisions
+its own Let’s Encrypt cert, and the “Enforce HTTPS” option appears.
+
 ---
 
 ## Point the app at your service
