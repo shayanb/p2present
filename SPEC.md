@@ -436,10 +436,10 @@ the Share menu's **📍 Copy link to this moment** option copies a
 
 ## Tooling
 
-- **[Builder](https://ibeezhan.github.io/p2present/builder/)** (`docs/builder/`) —
+- **[Builder](https://p2present.com/builder/)** (`docs/builder/`) —
   assemble/edit a manifest visually with live JSON + validation against this
   schema, then download / copy / open-in-player. See [AUTHORING.md](AUTHORING.md).
-- **[Host helper](https://ibeezhan.github.io/p2present/host/)** (`docs/host/`) —
+- **[Host helper](https://p2present.com/host/)** (`docs/host/`) —
   upload an asset through a pluggable **persistence provider** (Arweave / IPFS
   pinning / WebTorrent seedbox / S3) to produce an `ar://` / `ipfs://` / `magnet:`
   / `https` reference. See [HOSTING.md](HOSTING.md).

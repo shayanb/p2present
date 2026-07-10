@@ -1,8 +1,8 @@
 # Authoring a presentation, start to finish
 
 This guide walks the whole workflow: **make slides → host the assets → build the
-manifest → share**. It ties together the [Builder](https://ibeezhan.github.io/p2present/builder/),
-the [Host helper](https://ibeezhan.github.io/p2present/host/), the
+manifest → share**. It ties together the [Builder](https://p2present.com/builder/),
+the [Host helper](https://p2present.com/host/), the
 [hosting guide](HOSTING.md), and the [manifest spec](SPEC.md).
 
 A finished presentation is one small JSON file — `p2present.json` — that points at
@@ -25,7 +25,7 @@ slides + video  ─▶  host the assets  ─▶  p2present.json  ─▶  share a
   any page whose top-level `<section>`s are slides. Same-origin HTML decks get
   full two-way control (the player can drive them *and* hear their navigation).
 - a **PDF** — any slide PDF (one page per slide). Rendered with pdf.js; no tooling
-  needed. The [PDF demo](https://ibeezhan.github.io/p2present/?p=moav-pdf) is built
+  needed. The [PDF demo](https://p2present.com/?p=moav-pdf) is built
   exactly this way.
 
 **Video** is your talk recording. The lowest-effort path is **YouTube** (just use
@@ -40,7 +40,7 @@ WebTorrent / S3 (Step 2).
 ## Step 2 — Host the assets
 
 Each asset becomes a `src` in the manifest. The
-[Host helper](https://ibeezhan.github.io/p2present/host/) turns a file into a
+[Host helper](https://p2present.com/host/) turns a file into a
 reference through a **persistence provider** you pick — mix freely per asset (see
 [HOSTING.md](HOSTING.md) for the full detail):
 
@@ -67,7 +67,7 @@ paste them straight into a source field.
 
 ## Step 3 — Build the manifest
 
-Open the **[Builder](https://ibeezhan.github.io/p2present/builder/)**. It writes a
+Open the **[Builder](https://p2present.com/builder/)**. It writes a
 valid `p2present.json` for you, with a live JSON preview and **schema validation**
 (green ✓ / listed issues) as you type.
 
@@ -148,7 +148,7 @@ You have two ways to get the presentation in front of people:
 **B. Share a link (no fork).** From the player, the **🔗 Share** button opens a
 small menu; **Copy presentation link** copies a self-contained `?src=<base64>`
 link that carries the whole manifest — anyone can open it on the public player at
-`ibeezhan.github.io/p2present`. (Inline manifests must use **absolute** asset
+`p2present.com`. (Inline manifests must use **absolute** asset
 URLs, since there's no manifest folder to resolve relative paths against.)
 
 **Deep-link to a moment.** The same Share menu's **📍 Copy link to this moment**

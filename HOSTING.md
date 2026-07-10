@@ -15,7 +15,7 @@ them freely (even as an ordered fallback list — see [SPEC.md](SPEC.md)):
 | **IPFS** | `ipfs://<cid>` or `<cid>/path` | content-addressed, gateway-served, optionally pinned |
 | **WebTorrent** | `magnet:?xt=urn:btih:…` | peer-to-peer streaming, no server |
 
-The **[Host helper page](https://ibeezhan.github.io/p2present/host/)** turns a file
+The **[Host helper page](https://p2present.com/host/)** turns a file
 into one of these references in your browser. It is built around a pluggable
 **persistence-provider** interface (mirroring the video-provider pattern): pick a
 provider, supply the config it needs, upload, and copy the reference into the
@@ -316,7 +316,7 @@ simplest first:
 
 ## Next step
 
-Once your assets are hosted, open the **[Builder](https://ibeezhan.github.io/p2present/builder/)**
+Once your assets are hosted, open the **[Builder](https://p2present.com/builder/)**
 to assemble the `p2present.json` visually (it can read the references you produced
 on the Host page), then share the result. See the
 [Authoring guide](AUTHORING.md) for the full start-to-finish workflow.

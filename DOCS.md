@@ -2,7 +2,7 @@
 
 An index of everything. p2present is a forkable, **static** web app that plays
 presentation slides in sync with the talk video — see the
-**[live demo](https://ibeezhan.github.io/p2present/)**.
+**[live demo](https://p2present.com/)**.
 
 ## Guides
 
@@ -19,16 +19,16 @@ presentation slides in sync with the talk video — see the
 
 | App | URL | Purpose |
 |-----|-----|---------|
-| **Player / resolver** | [`/`](https://ibeezhan.github.io/p2present/) | Load a presentation from a URL / `ar://` / `ipfs://` / `magnet:` / `?src=` and play it. |
-| **HTML-deck demo** | [`/?p=demo`](https://ibeezhan.github.io/p2present/?p=demo) | The bundled `<deck-stage>` demo. |
-| **PDF-deck demo** | [`/?p=moav-pdf`](https://ibeezhan.github.io/p2present/?p=moav-pdf) | The same talk rendered from a PDF (pdf.js adapter). |
-| **Builder** | [`/builder/`](https://ibeezhan.github.io/p2present/builder/) | Build/edit a `p2present.json` visually with live preview + schema validation. |
-| **Host helper** | [`/host/`](https://ibeezhan.github.io/p2present/host/) | Upload a file via a persistence provider (Arweave / IPFS / WebTorrent / S3) → a manifest reference. |
+| **Player / resolver** | [`/`](https://p2present.com/) | Load a presentation from a URL / `ar://` / `ipfs://` / `magnet:` / `?src=` and play it. |
+| **HTML-deck demo** | [`/?p=demo`](https://p2present.com/?p=demo) | The bundled `<deck-stage>` demo. |
+| **PDF-deck demo** | [`/?p=moav-pdf`](https://p2present.com/?p=moav-pdf) | The same talk rendered from a PDF (pdf.js adapter). |
+| **Builder** | [`/builder/`](https://p2present.com/builder/) | Build/edit a `p2present.json` visually with live preview + schema validation. |
+| **Host helper** | [`/host/`](https://p2present.com/host/) | Upload a file via a persistence provider (Arweave / IPFS / WebTorrent / S3) → a manifest reference. |
 
 ## Common tasks
 
 - **Make a presentation** → [AUTHORING.md](AUTHORING.md)
-- **Host assets (Arweave / IPFS / WebTorrent / S3)** → [HOSTING.md](HOSTING.md) · [Host helper](https://ibeezhan.github.io/p2present/host/)
+- **Host assets (Arweave / IPFS / WebTorrent / S3)** → [HOSTING.md](HOSTING.md) · [Host helper](https://p2present.com/host/)
 - **Make a talk permanent (Arweave) + wire payment** → [HOSTING → Arweave](HOSTING.md) · [SERVICE → Make permanent](SERVICE.md#make-permanent)
 - **Save & share a manifest behind a short link** → [SERVICE.md](SERVICE.md)
 - **Sign a manifest (✓ signed by …)** → [AUTHORING → Sign it](AUTHORING.md#step-5--sign-it-optional) · [SPEC → sig](SPEC.md#sig)

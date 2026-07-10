@@ -14,7 +14,7 @@
     "import-chapters": "node scripts/import-chapters.mjs"
   },
   "license": "MIT",
-  "homepage": "https://ibeezhan.github.io/p2present/",
+  "homepage": "https://p2present.com/",
   "devDependencies": {
     "playwright": "1.61.1"
   }

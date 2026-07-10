@@ -11,7 +11,7 @@ presentation **slides in sync with the talk video** (scrub the video → the dec
 follows, and vice-versa). One repo, two faces: a **resolver/player** that loads a
 `p2present.json` manifest from anywhere (`https`, `ar://`, `ipfs://`, `magnet:`),
 and a **forkable self-host template** (drop content in `docs/content/`, enable
-GitHub Pages). Live: https://ibeezhan.github.io/p2present/ · player at `/app/`.
+GitHub Pages). Live: https://p2present.com/ · player at `/app/`.
 
 ## Philosophy — the non-negotiables
 

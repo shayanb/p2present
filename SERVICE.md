@@ -2,7 +2,7 @@
 
 > **This is the optional community-hosting backend.** p2present is a static site
 > and works fully without it — you can always paste a URL / `ipfs://` / `magnet:`,
-> build a manifest in the [Builder](https://ibeezhan.github.io/p2present/builder/),
+> build a manifest in the [Builder](https://p2present.com/builder/),
 > or [fork & self-host](README.md#fork--self-host). The service just adds a
 > one-click **"Save & share" → short link** flow on top of that, for people who
 > don't want to host a JSON file themselves.

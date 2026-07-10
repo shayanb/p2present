@@ -282,7 +282,7 @@ async function main() {
       await p.keyboard.press('Escape').catch(() => {});
       await p.waitForTimeout(150);
 
-      ok('home: nav links Docs + repo + builder', (await p.$$('a[href="docs/"]')).length >= 1 && (await p.$$('a[href*="github.com/ibeezhan/p2present"]')).length >= 1 && (await p.$$('a[href="builder/"]')).length >= 1);
+      ok('home: nav links Docs + repo + builder', (await p.$$('a[href="docs/"]')).length >= 1 && (await p.$$('a[href*="github.com/shayanb/p2present"]')).length >= 1 && (await p.$$('a[href="builder/"]')).length >= 1);
       const og = await p.evaluate(() => ({
         title: document.querySelector('meta[property="og:title"]')?.content || '',
         image: document.querySelector('meta[property="og:image"]')?.content || '',

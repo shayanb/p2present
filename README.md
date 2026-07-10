@@ -7,16 +7,16 @@ p2present is a tiny, dependency-light, **static** site (no server runtime). It h
 1. **Resolver host** — a landing page with a source box. Paste a remote presentation **source** — an `https://…/p2present.json`, an **`ar://` tx**, an **`ipfs://` CID**, or a **`magnet:` link** — and it fetches the manifest + assets (over whichever transport) and renders the synced player. Content can live anywhere, including the decentralized web.
 2. **Forkable self-host template** — fork the repo, drop your own slides + video + timing JSON into `docs/content/`, enable GitHub Pages, and you have your own instance.
 
-**▶ Home:** https://ibeezhan.github.io/p2present/ — the landing page. The player lives at **[`/app/`](https://ibeezhan.github.io/p2present/app/)**.
+**▶ Home:** https://p2present.com/ — the landing page. The player lives at **[`/app/`](https://p2present.com/app/)**.
 
 The "Load the MoaV demo" button opens the *"Rage-Coding the Mother of All VPNs"* deck (23 slides) synced to its [YouTube talk](https://www.youtube.com/watch?v=uYygWN1MZDE). The same talk also ships as a **PDF-deck** demo that exercises the pdf.js adapter:
 
 | | |
 |---|---|
-| **[HTML deck demo](https://ibeezhan.github.io/p2present/app/?p=demo)** | `<deck-stage>` web-component slides in an iframe |
-| **[PDF deck demo](https://ibeezhan.github.io/p2present/app/?p=moav-pdf)** | the same slides rendered from a PDF with pdf.js |
-| **[🛠 Builder](https://ibeezhan.github.io/p2present/builder/)** | assemble a `p2present.json` visually (live preview + schema validation) |
-| **[📤 Host helper](https://ibeezhan.github.io/p2present/host/)** | upload a file via a persistence provider (Arweave / IPFS / WebTorrent / S3) |
+| **[HTML deck demo](https://p2present.com/app/?p=demo)** | `<deck-stage>` web-component slides in an iframe |
+| **[PDF deck demo](https://p2present.com/app/?p=moav-pdf)** | the same slides rendered from a PDF with pdf.js |
+| **[🛠 Builder](https://p2present.com/builder/)** | assemble a `p2present.json` visually (live preview + schema validation) |
+| **[📤 Host helper](https://p2present.com/host/)** | upload a file via a persistence provider (Arweave / IPFS / WebTorrent / S3) |
 
 > Legacy player links on the root (`/?p=…`, `/?src=…`, `/?manifest=…`, `/?demo`) auto-redirect to `/app/`, so older shared links keep working.
 
@@ -59,7 +59,7 @@ Captured with the headless-Chrome smoke harness (`npm run smoke`).
 
 ![Header showing a verified author-signature badge](docs/screenshots/signed-badge.png)
 
-**Tools — the [Builder](https://ibeezhan.github.io/p2present/builder/) and [Host helper](https://ibeezhan.github.io/p2present/host/):**
+**Tools — the [Builder](https://p2present.com/builder/) and [Host helper](https://p2present.com/host/):**
 
 | Builder (live JSON + validation) | Host (pluggable persistence providers) |
 |----------------------------------|-----------------------------------|
@@ -91,8 +91,8 @@ Captured with the headless-Chrome smoke harness (`npm run smoke`).
 - **Decentralized loading & sharing** — load a whole presentation from `https` / `ipfs://` / `magnet:`, deep-link with `?manifest=` / `?p=`, or pack a self-contained `?src=<base64>` link with the **🔗 Share** button. See [Loading & sharing](#loading--sharing).
 - **Signed manifests** — optionally **sign** a `p2present.json` with an Ethereum wallet / key (**EIP-191** `personal_sign`) or a raw **Ed25519** keypair in the Builder; the player verifies it on load and shows a **“✓ signed by `<ENS / domain / 0x…>`”** badge (Ethereum addresses reverse-resolve to **ENS**). The signature covers the whole manifest, so any edit invalidates it — and it **never blocks playback**. Dependency-free crypto (`docs/src/crypto/`). See [SPEC → sig](SPEC.md#sig) · [AUTHORING → Sign it](AUTHORING.md#step-5--sign-it-optional).
 - **Thumbnail scrubber + deep-links** — hovering/seeking the timeline shows a **slide preview** for that moment (PDF pages are rendered live; HTML decks use authored thumbnails or a slide-label card). Open the player at an exact spot with `#t=<seconds>&slide=<n>`; the hash tracks where you are, and the **🔗 Share** menu's "copy link to this moment" copies a link to the current spot. See [Loading & sharing](#loading--sharing).
-- **Visual manifest builder** — the **[Builder](https://ibeezhan.github.io/p2present/builder/)** assembles a `p2present.json` from a form (video sources, deck, timing, subtitles, resolvers, layout) with a live JSON preview, **schema validation**, download / copy / open-in-player, load-existing, and a **timing-capture** helper that stamps the playing video's time against the current slide.
-- **Pluggable persistence providers** — the **[Host helper](https://ibeezhan.github.io/p2present/host/)** turns a file into a manifest reference through a registry of providers (mirroring the video providers): **Arweave** (`ar://`, pay-once permanent — the default), **IPFS pinning** (`ipfs://`, Pinata / web3.storage), **WebTorrent seedbox** (`magnet:`, in-tab + optional always-on), and **S3 / presigned PUT** (`https`). Tokens stay in your browser; a stubbed **"Make permanent" payment hook** (Stripe / on-chain rent) marks the boundary for paid permanence. See [HOSTING.md](HOSTING.md).
+- **Visual manifest builder** — the **[Builder](https://p2present.com/builder/)** assembles a `p2present.json` from a form (video sources, deck, timing, subtitles, resolvers, layout) with a live JSON preview, **schema validation**, download / copy / open-in-player, load-existing, and a **timing-capture** helper that stamps the playing video's time against the current slide.
+- **Pluggable persistence providers** — the **[Host helper](https://p2present.com/host/)** turns a file into a manifest reference through a registry of providers (mirroring the video providers): **Arweave** (`ar://`, pay-once permanent — the default), **IPFS pinning** (`ipfs://`, Pinata / web3.storage), **WebTorrent seedbox** (`magnet:`, in-tab + optional always-on), and **S3 / presigned PUT** (`https`). Tokens stay in your browser; a stubbed **"Make permanent" payment hook** (Stripe / on-chain rent) marks the boundary for paid permanence. See [HOSTING.md](HOSTING.md).
 - **Modular slide transitions** — `cut` · `fade` · `slide` · `none`, in an extensible registry.
 - **Polished controls** — play/pause, scrub-to-seek (with thumbnail preview), slide counter, playback speed (0.75–2×), keyboard + mouse-wheel navigation, **auto-hiding overlay controls in fullscreen**, accessible labels, reduced-motion aware.
 
@@ -105,7 +105,7 @@ Captured with the headless-Chrome smoke harness (`npm run smoke`).
 No build step. Any static file server works:
 
 ```bash
-git clone https://github.com/ibeezhan/p2present
+git clone https://github.com/shayanb/p2present
 cd p2present
 npm run preview          # serves ./docs at http://localhost:5173  (uses `serve`)
 # …or:  python3 -m http.server 5173 --directory docs
@@ -131,7 +131,7 @@ The whole site is served from the **`docs/`** folder on GitHub Pages — no buil
 
 > ⚠️ **Keep the `docs/.nojekyll` file.** GitHub Pages runs Jekyll by default, which ignores files/folders that start with `_` (the demo deck ships a `_ds/` design-system folder). `.nojekyll` disables that.
 
-You can also point the **resolver** at any remote manifest without forking the player: `https://ibeezhan.github.io/p2present/app/?manifest=https://your-host.example/p2present.json` (or an `ipfs://` / `magnet:` source). For cross-host `https`, the remote host must send permissive **CORS** headers for the JSON and assets.
+You can also point the **resolver** at any remote manifest without forking the player: `https://p2present.com/app/?manifest=https://your-host.example/p2present.json` (or an `ipfs://` / `magnet:` source). For cross-host `https`, the remote host must send permissive **CORS** headers for the JSON and assets.
 
 ---
 
@@ -376,8 +376,8 @@ The engine derives the active slide purely from `slideAtTime(videoTime)`. When t
 
 **Phase 3 — shipped:**
 
-- ✅ **Visual manifest [Builder](https://ibeezhan.github.io/p2present/builder/)** — build/edit a `p2present.json` with live preview + schema validation + timing capture.
-- ✅ **[Host helper](https://ibeezhan.github.io/p2present/host/)** — upload an asset in-browser via a persistence provider (generalized to a registry in Phase 9: Arweave / IPFS / WebTorrent / S3); see [HOSTING.md](HOSTING.md).
+- ✅ **Visual manifest [Builder](https://p2present.com/builder/)** — build/edit a `p2present.json` with live preview + schema validation + timing capture.
+- ✅ **[Host helper](https://p2present.com/host/)** — upload an asset in-browser via a persistence provider (generalized to a registry in Phase 9: Arweave / IPFS / WebTorrent / S3); see [HOSTING.md](HOSTING.md).
 - ✅ **PDF-deck demo** — a second demo (`?p=moav-pdf`) exercising the pdf.js adapter.
 - ✅ **Thumbnail scrubber** — slide previews on hover/seek (PDF pages rendered live; HTML via authored thumbnails).
 - ✅ **Deep-links** — `#t=<seconds>&slide=<n>` opens at a spot; the hash tracks navigation; a 📍 "this spot" share variant.
