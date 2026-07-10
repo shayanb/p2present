@@ -27,6 +27,9 @@ const MODES = [
     icon: '<rect x="1" y="1.5" width="14" height="9" rx="1"/><rect class="f" x="9.3" y="6" width="4.7" height="3.6" rx="0.6"/>' },
 ];
 const FS_ICON = '<path d="M1.5 4.5 V1.5 H4.5 M11.5 1.5 H14.5 V4.5 M14.5 7.5 V10.5 H11.5 M4.5 10.5 H1.5 V7.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+// Center play/pause feedback burst (see _flashPlayState).
+const BURST_PLAY_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 5.6 L18.6 12 L8.2 18.4 Z"/></svg>';
+const BURST_PAUSE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5.6" width="3.5" height="12.8" rx="1.1"/><rect x="13.5" y="5.6" width="3.5" height="12.8" rx="1.1"/></svg>';
 // Subtitles: a caption box with two short text lines.
 const CC_ICON = '<rect x="1" y="2.2" width="14" height="7.6" rx="1.6"/><path d="M3.6 6.9 H7" stroke-linecap="round"/><path d="M9 6.9 H12.4" stroke-linecap="round"/>';
 const LS = {
@@ -183,6 +186,7 @@ export class Player {
 
   _buildControls(bar) {
     this.btnPlay = button('▶', 'Play / pause (space)', () => this._togglePlay());
+    this.btnPlay.classList.add('p2-play-btn');
     this.btnPrev = button('‹', 'Previous slide (←)', () => this.sync.prevSlide());
     this.btnNext = button('›', 'Next slide (→)', () => this.sync.nextSlide());
 
@@ -197,6 +201,7 @@ export class Player {
       // the slide at that time together (sync.seekToTime), rather than only nudging
       // the video and waiting for the poll loop to catch up.
       this.sync.seekToTime((this.scrub.value / 1000) * dur);
+      this._paintScrub();
       this._showPreviewAtFraction(this.scrub.value / 1000);   // keep preview while dragging
     });
     // Tap-to-seek: native range inputs on touch only drag from the thumb, so a tap
@@ -210,6 +215,7 @@ export class Player {
       this.scrub.value = Math.round(frac * 1000);
       const dur = this.video.getDuration() || 0;
       this.sync.seekToTime(frac * dur);
+      this._paintScrub();
       this._showPreviewAtFraction(frac, e.clientX);
     });
     this._buildScrubPreview(bar);
@@ -519,10 +525,17 @@ export class Player {
     }, 1500);
   }
 
+  // Mirror the scrubber's value into --val so CSS can paint the neon-gradient
+  // "elapsed" portion of the custom track (native ranges can't style progress).
+  _paintScrub() {
+    this.scrub.style.setProperty('--val', `${(Number(this.scrub.value) / 10).toFixed(2)}%`);
+  }
+
   _renderState(s) {
     if (!this._scrubbing) {
       const frac = s.duration ? (s.time / s.duration) * 1000 : 0;
       this.scrub.value = String(frac);
+      this._paintScrub();
     }
     this.timeLabel.textContent = `${formatTime(s.time)} / ${formatTime(s.duration)}`;
     this.slideLabel.textContent = `${s.slide} / ${s.slideCount}`;
@@ -537,7 +550,25 @@ export class Player {
   }
 
   _togglePlay() {
-    if (this.video.isPlaying()) this.video.pause(); else this.video.play();
+    const willPlay = !this.video.isPlaying();
+    if (willPlay) this.video.play(); else this.video.pause();
+    if (this._started) this._flashPlayState(willPlay);
+  }
+
+  // A YouTube-style center burst confirming a play/pause toggle: pause lingers
+  // and slowly fades (so a screenshot moments later is clean chrome-free video);
+  // play is a short pop. One element, re-armed per flash.
+  _flashPlayState(playing) {
+    if (!this.stage) return;
+    if (!this._burst) {
+      this._burst = el('div', 'p2-burst');
+      this._burst.setAttribute('aria-hidden', 'true');
+      this.stage.appendChild(this._burst);
+    }
+    this._burst.innerHTML = playing ? BURST_PLAY_SVG : BURST_PAUSE_SVG;
+    this._burst.classList.remove('is-play', 'is-pause');
+    void this._burst.offsetWidth;                    // restart the CSS animation
+    this._burst.classList.add(playing ? 'is-play' : 'is-pause');
   }
 
   // --- center "start" overlay -----------------------------------------------
