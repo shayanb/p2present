@@ -163,7 +163,13 @@ export class SubtitleController {
     if (text === this._lastText) return;
     this._lastText = text;
     if (text) {
-      this.overlay.innerHTML = text.split('\n').map(escapeHtml).join('<br>');
+      // One block per line with dir="auto": each line resolves its own base
+      // direction from its first strong character (RTL for Farsi/Arabic/Hebrew),
+      // so Latin words embedded in an RTL line keep their correct order instead
+      // of being laid out against the page's LTR direction.
+      this.overlay.innerHTML = text.split('\n')
+        .map((line) => `<span class="p2-cc-line" dir="auto">${escapeHtml(line)}</span>`)
+        .join('');
       this.overlay.hidden = false;
     } else {
       this.overlay.hidden = true;

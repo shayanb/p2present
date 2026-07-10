@@ -351,19 +351,50 @@ body {
       transparent 62%, transparent 74%, var(--accent-dim) 74%, var(--accent-dim) 86%, transparent 86%);
 }
 
-/* --- brand watermark ---
+/* --- brand watermark + hover layout dock ---
    Bottom-left of the stage so it never collides with the PiP video (defaults
    bottom-right), the centered captions, or the controls bar below the stage.
-   Opaque mark kept subtle but clearly legible; brightens on hover. */
+   Hovering the mark unfolds a second layout switcher beside it (the morphs are
+   the show — flick between modes and watch). It stays open while the pointer is
+   anywhere over the dock (picking a mode does NOT collapse it) and folds away on
+   leave. Hover-only by design: touch keeps the control-bar fold. */
+.p2-wm-dock {
+  position: absolute; left: 12px; bottom: 10px; z-index: 40;
+  display: flex; align-items: center; gap: 10px;
+}
 .p2-watermark {
-  position: absolute; left: 12px; bottom: 10px; z-index: 6;
   line-height: 0; opacity: .62; transition: opacity .2s ease, transform .2s ease;
   filter: drop-shadow(0 2px 6px rgba(0,0,0,.55));
 }
 .p2-watermark img { width: 88px; height: auto; display: block; }
-.p2-watermark:hover, .p2-watermark:focus-visible { opacity: 1; transform: translateY(-1px); }
-@media (max-width: 560px) { .p2-watermark img { width: 64px; } .p2-watermark { left: 8px; bottom: 8px; } }
-@media (prefers-reduced-motion: reduce) { .p2-watermark { transition: none; } }
+.p2-watermark:hover, .p2-watermark:focus-visible,
+.p2-wm-dock:hover .p2-watermark { opacity: 1; }
+.p2-wm-modes {
+  display: inline-flex; align-items: center; gap: 5px;
+  visibility: hidden; pointer-events: none;
+}
+.p2-wm-dock:hover .p2-wm-modes,
+.p2-wm-dock:focus-within .p2-wm-modes { visibility: visible; pointer-events: auto; }
+/* each mode unfolds from behind the mark with a small stagger */
+.p2-wm-mode.p2-btn {
+  opacity: 0; transform: translateX(-10px) scale(.9);
+  transition: opacity .22s ease, transform .28s var(--ease, ease),
+              border-color .15s, color .15s;
+  background: rgba(10,12,17,.82);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border-color: rgba(255,255,255,.16);
+}
+.p2-wm-dock:hover .p2-wm-mode,
+.p2-wm-dock:focus-within .p2-wm-mode { opacity: 1; transform: none; }
+.p2-wm-dock:hover .p2-wm-mode:nth-child(2), .p2-wm-dock:focus-within .p2-wm-mode:nth-child(2) { transition-delay: .05s; }
+.p2-wm-dock:hover .p2-wm-mode:nth-child(3), .p2-wm-dock:focus-within .p2-wm-mode:nth-child(3) { transition-delay: .1s; }
+.p2-wm-dock:hover .p2-wm-mode:nth-child(4), .p2-wm-dock:focus-within .p2-wm-mode:nth-child(4) { transition-delay: .15s; }
+@media (max-width: 560px) { .p2-watermark img { width: 64px; } .p2-wm-dock { left: 8px; bottom: 8px; } }
+@media (hover: none) { .p2-wm-modes { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .p2-watermark, .p2-wm-mode.p2-btn { transition: none; }
+  .p2-wm-dock:hover .p2-wm-mode { transition-delay: 0s; }
+}
 
 /* --- center "start" overlay (brand play mark) ---
    A large, on-brand play affordance centred over the stage before playback.
@@ -426,6 +457,10 @@ body {
   text-shadow: 0 1px 2px rgba(0,0,0,0.9);
 }
 .p2-cc-overlay[hidden] { display: none; }
+/* One block per cue line; dir="auto" (set by subtitles.js) resolves each line's
+   base direction from its content, so RTL captions with embedded Latin words
+   render in the right order. */
+.p2-cc-line { display: block; unicode-bidi: plaintext; }
 /* Full-window placement: the overlay is mounted on the whole player stage and
    pinned bottom-centre, so captions read over slides + video together in every
    layout mode (and in fullscreen, where the stage fills the viewport). Sits above

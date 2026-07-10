@@ -77,8 +77,19 @@ export class Player {
     // floating immediately so early paints/tests never see the old in-flow bar.
     this.root.classList.add('p2-floating-controls', 'p2-controls-visible');
     // Subtle brand watermark in the stage corner — opaque mark, links home, and
-    // tucked clear of the controls bar and centered captions.
-    stage.appendChild(brandWatermark());
+    // tucked clear of the controls bar and centered captions. Hovering it unfolds
+    // a second layout switcher right there (see _buildWatermarkDock).
+    stage.appendChild(this._buildWatermarkDock());
+    // Tap / click anywhere on the stage toggles play — the same affordance as
+    // pressing space — but never for clicks on real controls (buttons, links,
+    // inputs, the divider, PiP drag/resize grips) and not while a popover menu
+    // is open (closing a menu shouldn't also pause the talk).
+    stage.addEventListener('click', (e) => {
+      if (!this._started) return;
+      if (e.target.closest('button, a, input, select, .p2-divider, .p2-pip-handle, .p2-pip-resize, .p2-controls')) return;
+      if (this.root.querySelector('.p2-fold.is-open, .p2-cc-menu.is-open')) return;
+      this._togglePlay();
+    });
     // Center brand "start" overlay — the large play affordance shown before the
     // talk begins (hidden via .p2-started once playback starts). Skipped entirely
     // in capture mode, where the slides must be visible/scrubbable immediately.
@@ -561,11 +572,33 @@ export class Player {
     this._syncModeButtons();
   }
 
+  // The watermark dock: the brand mark plus a layout switcher that unfolds on
+  // hover/focus (pure CSS reveal — see .p2-wm-dock). Picking a mode transitions
+  // the layout but deliberately does NOT collapse the row; it folds away only
+  // when the pointer leaves, so you can flick between modes and watch them morph.
+  _buildWatermarkDock() {
+    const dock = el('div', 'p2-wm-dock');
+    const modes = el('div', 'p2-wm-modes');
+    modes.setAttribute('role', 'group');
+    modes.setAttribute('aria-label', 'Switch layout');
+    this._wmButtons = {};
+    for (const m of MODES) {
+      const b = iconButton(svgIcon(m.icon), m.short, m.label, () => this.setMode(m.id));
+      b.classList.add('p2-wm-mode');
+      b.classList.toggle('is-on', m.id === this.mode);
+      this._wmButtons[m.id] = b;
+      modes.appendChild(b);
+    }
+    dock.append(brandWatermark(), modes);
+    return dock;
+  }
+
   _syncModeButtons() {
     if (!this.modeButtons) return;
     for (const m of MODES) {
       this.modeButtons[m.id]?.classList.toggle('is-on', m.id === this.mode);
       this.modeButtons[m.id]?.setAttribute('aria-checked', String(m.id === this.mode));
+      this._wmButtons?.[m.id]?.classList.toggle('is-on', m.id === this.mode);
     }
     // Reflect the active layout on the fold's trigger button.
     const cur = MODES.find((m) => m.id === this.mode) || MODES[0];

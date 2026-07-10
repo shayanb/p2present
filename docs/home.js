@@ -42,8 +42,15 @@ const morph    = document.querySelector('.morph');
 const showcase  = document.getElementById('showcase');
 const sticky    = document.querySelector('.showcase-sticky');
 const titleEl   = document.getElementById('morph-title');
+const kickerEl  = document.querySelector('.showcase-head .kicker');
 const capEls    = [...document.querySelectorAll('.morph-cap')];
 const dotEls     = [...document.querySelectorAll('#morph-dots i')];
+
+// Where the source climax begins/ends along the pinned track. The title/step
+// flips to "Plays from any source" at FLOW_START — the same instant the source
+// cards start coming in — so the heading always narrates what's on screen.
+const FLOW_START = 0.7;
+const FLOW_END = 0.97;
 
 let currentStep = -1;
 let ticking = false;
@@ -58,7 +65,10 @@ function computeProgress() {
 }
 
 function computeStep() {
-  return clamp(Math.floor(computeProgress() * STEPS.length), 0, STEPS.length - 1);
+  const p = computeProgress();
+  // The four layout bands share [0, FLOW_START); the source climax owns the rest.
+  if (p >= FLOW_START) return STEPS.length - 1;
+  return clamp(Math.floor((p / FLOW_START) * (STEPS.length - 1)), 0, STEPS.length - 2);
 }
 
 function applyStep(step) {
@@ -66,6 +76,7 @@ function applyStep(step) {
   currentStep = step;
   if (morph) morph.dataset.step = String(step);
   if (titleEl) titleEl.textContent = STEPS[step].title;
+  if (kickerEl) kickerEl.textContent = step >= 4 ? 'One link · forever' : 'One player';
   capEls.forEach((c) => c.classList.toggle('active', Number(c.dataset.step) === step));
   dotEls.forEach((d, i) => d.classList.toggle('on', i === step));
   // the final phase: ignite the source constellation streaming into the player
@@ -77,9 +88,7 @@ function applySourceFlow(progress) {
   // Hold off until the layout has finished settling into PiP, THEN stream the
   // sources in — the "finish the format, then plug in every source" beat. The
   // window runs to near the end so the chips land fully lit (labels visible).
-  const start = 0.7;
-  const end = 0.97;
-  flowIntensity = clamp((progress - start) / (end - start), 0, 1);
+  flowIntensity = clamp((progress - FLOW_START) / (FLOW_END - FLOW_START), 0, 1);
   sticky.style.setProperty('--flow', flowIntensity.toFixed(3));
   sticky.classList.toggle('sourcing', flowIntensity > 0.005);
 }
@@ -124,8 +133,9 @@ function wireCaptionJumps() {
     cap.addEventListener('click', () => {
       const step = Number(cap.dataset.step);
       const total = showcase.offsetHeight - window.innerHeight;
-      // aim at the middle of that step's band so it lands cleanly on the mode
-      const target = showcase.offsetTop + total * ((step + 0.5) / STEPS.length);
+      // aim at the middle of that step's band (the four layout bands share
+      // [0, FLOW_START)) so it lands cleanly on the mode
+      const target = showcase.offsetTop + total * (((step + 0.5) / (STEPS.length - 1)) * FLOW_START);
       if (lenis) lenis.scrollTo(target, { duration: 1.1 });
       else window.scrollTo({ top: target, behavior: reduceMotion ? 'auto' : 'smooth' });
     });
