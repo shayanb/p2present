@@ -279,3 +279,102 @@ test('optional IPFS mirror pins on create when enabled', async () => {
     globalThis.fetch = realFetch;
   }
 });
+
+// --- per-talk OG page (/p/:id) ------------------------------------------------
+
+test('GET /p/:id for a KNOWN id serves a per-talk OG page (not a bare redirect)', async () => {
+  const env = baseEnv();
+  const { id } = await (await call(env, 'POST', '/api/p', { body: { ...VALID, title: 'OG <Talk> & Co', meta: { author: 'Shayan', event: 'Berlin 2026' } } })).json();
+  const res = await call(env, 'GET', `/p/${id}`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/html/);
+  const html = await res.text();
+  assert.match(html, /property="og:title" content="OG &lt;Talk&gt; &amp; Co"/);   // escaped
+  assert.match(html, /property="og:description" content="Shayan · Berlin 2026/);
+  // VALID's youtube src ('abc') is too short for a thumb → site-card fallback
+  assert.match(html, /content="https:\/\/svc\.example\/brand\/og-card\.png"/);
+});
+
+test('OG image prefers absolute poster, then YouTube thumb, then the site card', async () => {
+  const { ogImageFor } = await import('../src/worker.js');
+  const reqUrl = new URL('https://svc.example/p/x');
+  assert.equal(
+    ogImageFor({ video: { poster: 'https://cdn.example/p.jpg', sources: [] } }, {}, reqUrl),
+    'https://cdn.example/p.jpg');
+  assert.equal(
+    ogImageFor({ video: { sources: [{ provider: 'youtube', src: 'uYygWN1MZDE' }] } }, {}, reqUrl),
+    'https://i.ytimg.com/vi/uYygWN1MZDE/hqdefault.jpg');
+  assert.equal(
+    ogImageFor({ video: { sources: [{ provider: 'youtube', src: 'https://youtu.be/uYygWN1MZDE?t=1' }] } }, {}, reqUrl),
+    'https://i.ytimg.com/vi/uYygWN1MZDE/hqdefault.jpg');
+  assert.equal(
+    ogImageFor({ video: { sources: [{ provider: 'mp4', src: 'talk.mp4' }] } }, { APP_BASE: 'https://p2present.com/app/' }, reqUrl),
+    'https://p2present.com/brand/og-card.png');
+  assert.equal(ogImageFor({}, {}, reqUrl), 'https://svc.example/brand/og-card.png');
+});
+
+test('GET /p/:id for a hidden or expired id falls back to the 302 redirect', async () => {
+  const env = baseEnv();
+  const { id } = await (await call(env, 'POST', '/api/p', { body: VALID })).json();
+  const rec = await env.P2_KV.get(`doc:${id}`, 'json');
+  rec.meta.hidden = true;
+  await env.P2_KV.put(`doc:${id}`, JSON.stringify(rec));
+  const res = await call(env, 'GET', `/p/${id}`);
+  assert.equal(res.status, 302);
+});
+
+// --- /api/chapters --------------------------------------------------------------
+
+test('videoIdFrom accepts urls, short links, shorts, and bare ids', async () => {
+  const { videoIdFrom } = await import('../src/worker.js');
+  assert.equal(videoIdFrom('https://www.youtube.com/watch?v=uYygWN1MZDE&t=5'), 'uYygWN1MZDE');
+  assert.equal(videoIdFrom('https://youtu.be/uYygWN1MZDE'), 'uYygWN1MZDE');
+  assert.equal(videoIdFrom('https://www.youtube.com/shorts/uYygWN1MZDE'), 'uYygWN1MZDE');
+  assert.equal(videoIdFrom('uYygWN1MZDE'), 'uYygWN1MZDE');
+  assert.equal(videoIdFrom('https://example.com/talk.mp4'), null);
+  assert.equal(videoIdFrom(''), null);
+});
+
+test('chaptersFromText parses M:SS lines and rejects single timestamps', async () => {
+  const { chaptersFromText } = await import('../src/worker.js');
+  const list = chaptersFromText('intro text\n0:00 Title slide\n1:24 - The problem\n1:02:03 The fix\nno timestamp here');
+  assert.deepEqual(list.map((c) => c.time), ['0:00', '1:24', '1:02:03']);
+  assert.equal(list[1].label, 'The problem');
+  assert.deepEqual(chaptersFromText('0:00 only one'), []);
+});
+
+test('extractChapters prefers chapterRenderer markers, falls back to description', async () => {
+  const { extractChapters } = await import('../src/worker.js');
+  const markers =
+    '{"chapterRenderer":{"title":{"simpleText":"Intro"},"timeRangeStartMillis":0}}' +
+    '{"chapterRenderer":{"title":{"simpleText":"The \\"fix\\""},"timeRangeStartMillis":84000}}';
+  const viaMarkers = extractChapters(markers);
+  assert.deepEqual(viaMarkers, [{ time: '0:00', label: 'Intro' }, { time: '1:24', label: 'The "fix"' }]);
+  const viaDesc = extractChapters('"shortDescription":"hello\\n0:00 One\\n2:10 Two\\n"');
+  assert.deepEqual(viaDesc.map((c) => c.label), ['One', 'Two']);
+  assert.deepEqual(extractChapters('<html>nothing here</html>'), []);
+});
+
+test('GET /api/chapters proxies YouTube, caches in KV, and validates input', async () => {
+  const realFetch = globalThis.fetch;
+  const page = '"chapterRenderer":{"title":{"simpleText":"Start"},"timeRangeStartMillis":0}' +
+               '"chapterRenderer":{"title":{"simpleText":"Middle"},"timeRangeStartMillis":90000}';
+  let upstreamCalls = 0;
+  globalThis.fetch = async () => { upstreamCalls++; return new Response(page, { status: 200 }); };
+  try {
+    const env = baseEnv();
+    const bad = await call(env, 'GET', '/api/chapters?u=nope');
+    assert.equal(bad.status, 400);
+    const res = await call(env, 'GET', '/api/chapters?u=https://youtu.be/uYygWN1MZDE');
+    assert.equal(res.status, 200);
+    const out = await res.json();
+    assert.equal(out.videoId, 'uYygWN1MZDE');
+    assert.deepEqual(out.chapters.map((c) => c.time), ['0:00', '1:30']);
+    // second call is served from the KV cache (no new upstream fetch)
+    const res2 = await call(env, 'GET', '/api/chapters?u=uYygWN1MZDE');
+    assert.equal((await res2.json()).cached, true);
+    assert.equal(upstreamCalls, 1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

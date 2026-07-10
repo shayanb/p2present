@@ -145,6 +145,37 @@ For a fork, the simplest is a `<meta>` tag in `docs/app/index.html`:
 
 ---
 
+## What `/p/:id` serves
+
+A shared short link is more than a redirect: for a **known id** the Worker
+returns a small HTML page whose Open Graph / Twitter tags carry the talk's own
+title, author · event byline, and thumbnail (the manifest's absolute
+`video.poster`, else the YouTube thumbnail, else the site's generic card) — so
+pasting the link into X / Slack / Discord / LinkedIn previews *that talk*, not
+the generic app card. Humans are redirected into the player instantly (meta
+refresh + script + a visible link); crawlers, which don't run JS, read the
+tags. Unknown, hidden, or expired ids fall back to a plain `302` so the player
+surfaces its own error.
+
+---
+
+## Chapter proxy (`GET /api/chapters`)
+
+The Builder's **✨ Auto-detect chapters** needs to read a YouTube video's
+chapter list, which a static page can't do (the description is behind CORS).
+The Worker proxies it:
+
+```
+GET <service>/api/chapters?u=<youtube url | 11-char id>
+→ { "videoId": "…", "chapters": [{ "time": "1:24", "label": "The problem" }, …] }
+```
+
+It prefers the video's explicit chapter markers (the segmented player bar) and
+falls back to `M:SS Title` lines in the description. Results are cached in KV
+for a day; cache misses count against the same per-IP rate limit as writes.
+
+---
+
 ## Optional: mirror to IPFS on save
 
 Behind a config flag, the Worker can also pin every saved manifest to IPFS and

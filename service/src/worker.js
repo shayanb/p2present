@@ -13,8 +13,10 @@
 //   PUT    /api/p/:id        Authorization: Bearer <editToken>, body = manifest
 //   DELETE /api/p/:id        Authorization: Bearer <editToken>
 //   POST   /api/report       body = { id, reason }   → records a report
+//   GET    /api/chapters?u=… YouTube chapter proxy for the Builder (KV-cached)
 //   GET    /api/recent                               → recent PUBLIC ids (listing)
-//   GET    /p/:id                                    → 302 to the player (human link)
+//   GET    /p/:id            → per-talk OG page + instant redirect into the player
+//                              (unknown/hidden/expired ids → plain 302)
 //   GET    /                                         → service info
 //
 // Query params on create: ?visibility=public|unlisted (default unlisted),
@@ -142,13 +144,166 @@ async function pinToIpfs(env, manifest) {
 const humanUrl = (id, reqUrl) => `${reqUrl.origin}/p/${id}`;
 const apiUrl = (id, reqUrl) => `${reqUrl.origin}/api/p/${id}`;
 
-function appRedirect(id, env, reqUrl) {
+function appUrl(id, env, reqUrl) {
   let base = env?.APP_BASE || `${reqUrl.origin}/app/`;
   if (!base.endsWith('/')) base += '/';
+  return `${base}?p=${encodeURIComponent(id)}`;
+}
+
+function appRedirect(id, env, reqUrl) {
   return new Response(null, {
     status: 302,
-    headers: { location: `${base}?p=${encodeURIComponent(id)}`, ...corsHeaders(env) },
+    headers: { location: appUrl(id, env, reqUrl), ...corsHeaders(env) },
   });
+}
+
+// --- /p/:id — per-talk OG page ------------------------------------------------
+// Social crawlers (X / Slack / Discord / LinkedIn / FB) don't run JS and read
+// only the HTML served at the shared URL — a bare 302 gives every talk the same
+// generic card. So a KNOWN id serves a tiny 200 page carrying the talk's own
+// title / description / thumbnail as OG tags plus an instant redirect for
+// humans (meta refresh + script + a visible link). Unknown / hidden / expired
+// ids keep the plain 302 so the player surfaces its own error.
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/** Best per-talk preview image: absolute poster → YouTube thumb → site card. */
+export function ogImageFor(manifest, env, reqUrl) {
+  const poster = manifest?.video?.poster;
+  if (typeof poster === 'string' && /^https?:\/\//i.test(poster)) return poster;
+  const yt = (manifest?.video?.sources || []).find((s) => s?.provider === 'youtube' && s.src);
+  if (yt) {
+    const s = String(yt.src).trim();
+    const m = s.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/) || s.match(/^([\w-]{11})$/);
+    if (m) return `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg`;   // hqdefault always exists
+  }
+  // the site's generic card, served next to the player
+  let origin = reqUrl.origin;
+  try { if (env?.APP_BASE) origin = new URL(env.APP_BASE).origin; } catch { /* keep request origin */ }
+  return `${origin}/brand/og-card.png`;
+}
+
+async function handleHumanLink(id, env, reqUrl) {
+  const rec = await env.P2_KV.get(`doc:${id}`, 'json');
+  const gone = !rec || rec.meta?.hidden || (rec.meta?.expires && Date.now() > rec.meta.expires);
+  if (gone) return appRedirect(id, env, reqUrl);
+
+  const m = rec.manifest || {};
+  const title = m.title || 'A p2present presentation';
+  const byline = [m.meta?.author, m.meta?.event, m.meta?.date].filter(Boolean).join(' · ');
+  const desc = [byline, m.meta?.description].filter(Boolean).join(' — ')
+    || 'Slides in sync with the talk video — scrub to any moment.';
+  const img = ogImageFor(m, env, reqUrl);
+  const url = humanUrl(id, reqUrl);
+  const target = appUrl(id, env, reqUrl);
+
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>${esc(title)} — p2present</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="${esc(desc)}">
+<link rel="canonical" href="${esc(url)}">
+<meta property="og:type" content="video.other">
+<meta property="og:site_name" content="p2present">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(desc)}">
+<meta property="og:url" content="${esc(url)}">
+<meta property="og:image" content="${esc(img)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${esc(title)}">
+<meta name="twitter:description" content="${esc(desc)}">
+<meta name="twitter:image" content="${esc(img)}">
+<meta http-equiv="refresh" content="0;url=${esc(target)}">
+<style>body{background:#06070b;color:#98a1af;font:15px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}a{color:#4fd1c5}</style>
+</head><body><p>Opening <a href="${esc(target)}">${esc(title)}</a>…</p>
+<script>location.replace(${JSON.stringify(target)});</script></body></html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'public, max-age=300',
+      ...corsHeaders(env),
+    },
+  });
+}
+
+// --- /api/chapters — YouTube chapter proxy -------------------------------------
+// The Builder's "Auto-detect chapters" can't read a YouTube description from a
+// static page (CORS), so the Worker fetches the watch page and extracts chapters:
+// first the explicit chapter markers (the segmented player bar), then "M:SS
+// Title" lines in the description. Results cache in KV for a day; misses count
+// against the same per-IP rate limit as writes.
+
+/** Pull an 11-char YouTube id out of a URL or bare id; null when it isn't one. */
+export function videoIdFrom(u) {
+  const s = String(u || '').trim();
+  const m = s.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/) || s.match(/^([\w-]{11})$/);
+  return m ? m[1] : null;
+}
+
+/** Parse "M:SS Title" / "1:02:03 - Title" lines out of description text. */
+export function chaptersFromText(text) {
+  const out = [];
+  for (const line of String(text || '').split('\n')) {
+    const m = line.match(/^\s*[-•([]?\s*(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–—).:\]]?\s+(.+)$/);
+    if (m) out.push({ time: m[1], label: m[2].trim() });
+  }
+  return out.length >= 2 ? out : [];   // a single timestamp is rarely a chapter list
+}
+
+const fmtSecs = (sec) => {
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);
+  return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+           : `${m}:${String(s).padStart(2, '0')}`;
+};
+
+/** Extract chapters from a YouTube watch-page HTML string. */
+export function extractChapters(html) {
+  // 1) explicit chapter markers (chapterRenderer entries in ytInitialData)
+  const chapters = [];
+  const rx = /"chapterRenderer":\{"title":\{"simpleText":"((?:[^"\\]|\\.)*)"\},"timeRangeStartMillis":(\d+)/g;
+  let m;
+  while ((m = rx.exec(html))) {
+    let title = m[1];
+    try { title = JSON.parse(`"${m[1]}"`); } catch { /* keep raw */ }
+    chapters.push({ time: fmtSecs(Math.round(Number(m[2]) / 1000)), label: title });
+  }
+  if (chapters.length >= 2) return chapters;
+  // 2) fall back to timestamp lines in the description
+  const d = html.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
+  if (d) { try { return chaptersFromText(JSON.parse(`"${d[1]}"`)); } catch { /* fall through */ } }
+  return [];
+}
+
+async function handleChapters(env, ip, reqUrl) {
+  const u = reqUrl.searchParams.get('u') || reqUrl.searchParams.get('v') || '';
+  const vid = videoIdFrom(u);
+  if (!vid) return json({ error: 'invalid_video', detail: 'pass a YouTube URL or 11-char id as ?u=' }, 400, env);
+
+  const cacheKey = `chapters:${vid}`;
+  const cached = await env.P2_KV.get(cacheKey, 'json');
+  if (cached) return json({ videoId: vid, chapters: cached, cached: true }, 200, env);
+
+  if (!(await allowWrite(env, ip))) return json({ error: 'rate_limited' }, 429, env);
+
+  let html;
+  try {
+    const res = await fetch(`https://www.youtube.com/watch?v=${vid}&hl=en`, {
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'accept-language': 'en',
+      },
+    });
+    if (!res.ok) return json({ error: 'upstream', detail: `YouTube answered HTTP ${res.status}` }, 502, env);
+    html = await res.text();
+  } catch (err) {
+    return json({ error: 'upstream', detail: String(err?.message || err) }, 502, env);
+  }
+
+  const chapters = extractChapters(html);
+  if (chapters.length) await env.P2_KV.put(cacheKey, JSON.stringify(chapters), { expirationTtl: 86400 });
+  return json({ videoId: vid, chapters }, 200, env);
 }
 
 // KV put options that preserve a record's remaining TTL on update.
@@ -340,10 +495,15 @@ export default {
         return json({ error: 'method_not_allowed' }, 405, env);
       }
 
-      // /p/:id — human link → redirect into the player
+      // GET /api/chapters?u=<youtube url|id> — chapter proxy for the Builder
+      if (pathname === '/api/chapters' && request.method === 'GET') {
+        return await handleChapters(env, ip, url);
+      }
+
+      // /p/:id — human link → per-talk OG page (302 fallback for unknown ids)
       const humanMatch = /^\/p\/([\w.-]+)\/?$/.exec(pathname);
       if (humanMatch && request.method === 'GET') {
-        return appRedirect(humanMatch[1], env, url);
+        return await handleHumanLink(humanMatch[1], env, url);
       }
 
       return json({ error: 'not_found' }, 404, env);

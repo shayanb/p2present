@@ -8,6 +8,7 @@
 // the current slide to build the timing[] quickly.
 
 import { encodeBase64 } from '../src/resolve.js';
+import { serviceBase } from '../src/service.js';
 import { normaliseManifest, loadPresentation } from '../src/manifest.js';
 import { validate } from '../src/schema-validate.js';
 import { Player } from '../src/player.js';
@@ -418,13 +419,14 @@ function applyChapters() {
   $('s-chapters-status').textContent = `Added ${cues.length} cue${cues.length > 1 ? 's' : ''} (one slide each) — refine with capture below.`;
 }
 
-// Best-effort chapter auto-detect. A pure-static page can't read a YouTube video's
-// chapters (they live in the description, behind CORS), so this only succeeds when
-// the optional service exposes a /chapters proxy; otherwise it falls back to paste.
+// Chapter auto-detect. A pure-static page can't read a YouTube video's chapters
+// (they live in the description, behind CORS), so the sharing service proxies
+// them: GET <service>/api/chapters?u=<url|id> (see SERVICE.md). Falls back to
+// paste when the service is unreachable or the video has no chapter list.
 async function fetchChapters(videoUrl) {
-  const base = (window.P2PRESENT_SERVICE || '').replace(/\/$/, '');
+  const base = serviceBase();
   if (!base) return null;
-  const res = await fetch(`${base}/chapters?u=${encodeURIComponent(videoUrl)}`, { headers: { accept: 'application/json' } });
+  const res = await fetch(`${base}/api/chapters?u=${encodeURIComponent(videoUrl)}`, { headers: { accept: 'application/json' } });
   if (!res.ok) return null;
   const data = await res.json().catch(() => null);
   const list = Array.isArray(data?.chapters) ? data.chapters : (Array.isArray(data) ? data : null);
@@ -442,9 +444,9 @@ async function autoDetectChapters() {
       status.textContent = `Found ${chapters.length} chapters — review, then “Use these as timing”.`;
       return;
     }
-    status.textContent = 'No auto-source available — paste chapters below (copy them from the video description).';
+    status.textContent = 'No chapter list found on that video — paste one below (copy it from the description).';
   } catch {
-    status.textContent = 'Auto-detect needs the optional service — paste chapters below instead.';
+    status.textContent = 'Could not reach the chapter service — paste chapters below instead.';
   }
   $('s-chapters').focus();
 }
