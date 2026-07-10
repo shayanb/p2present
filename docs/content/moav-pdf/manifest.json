@@ -21,7 +21,8 @@
     "slideCount": 23
   },
   "subtitles": [
-    { "lang": "en", "label": "English (sample)", "src": "../demo/subtitles/sample-en.vtt", "format": "vtt", "default": true }
+    { "lang": "en", "label": "English", "src": "../demo/subtitles/moav-en.srt", "format": "srt", "default": true },
+    { "lang": "fa", "label": "فارسی", "src": "../demo/subtitles/moav-fa.srt", "format": "srt" }
   ],
   "resolvers": {
     "ipfsGateways": ["https://{cid}.ipfs.dweb.link", "https://ipfs.io/ipfs/{cid}"],

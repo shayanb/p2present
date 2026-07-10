@@ -1,0 +1,1655 @@
+1
+00:00:00,000 --> 00:00:01,480
+Eskandari from Rebellion Systems.
+
+2
+00:00:03,360 --> 00:00:04,100
+Thank you.
+
+3
+00:00:06,860 --> 00:00:07,800
+Hello, everyone.
+
+4
+00:00:09,620 --> 00:00:10,880
+Welcome to this talk.
+
+5
+00:00:10,960 --> 00:00:13,460
+So I'm going to talk about the math scientist shed that matters.
+
+6
+00:00:14,080 --> 00:00:17,640
+And this is more of the story that I went through in the last few months.
+
+7
+00:00:18,400 --> 00:00:20,060
+So just a bit about myself.
+
+8
+00:00:21,020 --> 00:00:22,300
+I'm Shayan Eskandari.
+
+9
+00:00:22,440 --> 00:00:26,820
+I'm a security researcher, a hacker, educator, and human-centered technologist.
+
+10
+00:00:26,820 --> 00:00:32,780
+I did my PhD on blockchains on foreseen consequences, which is like front-running, oracle
+
+11
+00:00:32,780 --> 00:00:34,700
+failures, and the dark side of permissionless.
+
+12
+00:00:35,520 --> 00:00:40,700
+In the last decade, I've been doing smart contract security, I built enterprise staking
+
+13
+00:00:40,700 --> 00:00:41,700
+infrastructure for Ethereum,
+
+14
+00:00:42,720 --> 00:00:48,700
+and also, for the context of this talk, I've co-founded Iran Unchained, which was like
+
+15
+00:00:48,700 --> 00:00:52,620
+a DAO using crypto to route through geopolitical exclusion.
+
+16
+00:00:52,620 --> 00:00:53,120
+exclusion.
+
+17
+00:00:53,620 --> 00:00:58,900
+And also I've been teaching Farsi speakers and Iranians about crypto stack and technology
+
+18
+00:00:58,900 --> 00:01:03,900
+since 2015 through something called CoinIran Academy and also Shiri Akhad podcast but
+
+19
+00:01:03,900 --> 00:01:08,460
+my latest obsession is Moav, mother of all VPNs.
+
+20
+00:01:10,040 --> 00:01:16,180
+So just to give you the context, internet shutdowns is not a new thing, it's not a one
+
+21
+00:01:16,180 --> 00:01:16,540
+-off thing.
+
+22
+00:01:16,700 --> 00:01:21,540
+So Iran has been going dark for the last 15 years or or even 20 years.
+
+23
+00:01:22,500 --> 00:01:29,160
+And there are many incidents every time they learn what connections were leaked, and
+
+24
+00:01:29,160 --> 00:01:32,800
+they basically make it harder, make it bigger, and make it more complete.
+
+25
+00:01:33,080 --> 00:01:36,560
+And they learn from every shutdown and every internet filtering.
+
+26
+00:01:37,040 --> 00:01:40,000
+And this year has been one of the worst on the record.
+
+27
+00:01:41,780 --> 00:01:44,800
+Basically most of 2026, Iran has been offline.
+
+28
+00:01:45,640 --> 00:01:49,840
+It happened, it started with January 8th and 9th, which was the Iran street protests
+
+29
+00:01:49,840 --> 00:01:53,500
+against the government, and they shut down everything this time.
+
+30
+00:01:53,600 --> 00:01:57,320
+This time it was like SMS, phones, even intranet that usually works.
+
+31
+00:01:57,680 --> 00:01:58,920
+They were all cut down.
+
+32
+00:01:59,100 --> 00:02:04,360
+And during those two days, around 30,000 to 70,000 people were killed in the streets.
+
+33
+00:02:05,680 --> 00:02:09,980
+And then internet came back for a bit, and then the war began, and internet went blackout.
+
+34
+00:02:10,060 --> 00:02:12,260
+There was 88 days of full internet shutdown,
+
+35
+00:02:13,400 --> 00:02:18,180
+which later in late May, which three weeks ago, ago, internet came back in a really
+
+36
+00:02:18,180 --> 00:02:18,860
+weird state.
+
+37
+00:02:19,240 --> 00:02:25,620
+And what I mean a weird state is, so two weeks ago, Azerbaijan ended up being the number
+
+38
+00:02:25,620 --> 00:02:31,420
+three country for the chat GPT usage, which they have like 10 million people population,
+
+39
+00:02:31,680 --> 00:02:32,820
+so that's not really possible.
+
+40
+00:02:33,040 --> 00:02:37,200
+And we noticed that Iran's traffic is being routed to Azerbaijan for some reason.
+
+41
+00:02:39,480 --> 00:02:42,760
+And this is, before we say this is like Iran's problem, it's not.
+
+42
+00:02:42,940 --> 00:02:46,080
+We're seeing that to becoming a default, global default.
+
+43
+00:02:46,540 --> 00:02:52,200
+We've seen in Nepal after the social media ban, there was like 3,000% VPN demand getting,
+
+44
+00:02:52,400 --> 00:02:53,340
+VPN demand.
+
+45
+00:02:53,560 --> 00:02:57,360
+In Uganda, in United Kingdom, we're seeing that with the social, with the age verification.
+
+46
+00:02:57,880 --> 00:03:03,320
+And Iran after it restored, there was a thousand percent VPN demand, extra VPN demand.
+
+47
+00:03:03,600 --> 00:03:08,460
+And all these peaks are basically a population trying to to flee to free internet.
+
+48
+00:03:08,780 --> 00:03:10,960
+So it's almost a digital immigration happening.
+
+49
+00:03:11,440 --> 00:03:17,220
+And we're seeing that also governments are trying not to ban VPNs, but also DDoS VPN
+
+50
+00:03:17,220 --> 00:03:18,820
+infrastructures with Russia.
+
+51
+00:03:19,000 --> 00:03:22,080
+And we've seen conversations in the US about banning VPNs.
+
+52
+00:03:22,800 --> 00:03:25,880
+So basically it's a different flag, but the same playbook.
+
+53
+00:03:26,080 --> 00:03:28,320
+It's control the network, you can control the people.
+
+54
+00:03:29,040 --> 00:03:30,940
+And this is not going away.
+
+55
+00:03:31,140 --> 00:03:35,320
+Like as you've seen the other talks in the last, today and yesterday, VPN is becoming
+
+56
+00:03:35,320 --> 00:03:36,840
+one of the main topics.
+
+57
+00:03:38,240 --> 00:03:45,160
+And I want to use the Cory Doctorow and gentrification framework to just talk about
+
+58
+00:03:45,160 --> 00:03:46,580
+some of the Web3 aspects.
+
+59
+00:03:47,200 --> 00:03:52,160
+So just for a refresher to be on the same page, basically he talks about, let's say,
+
+60
+00:03:52,200 --> 00:03:59,240
+social media and Facebook, that Facebook started saying, MySpace is spying on you, come
+
+61
+00:03:59,240 --> 00:04:01,560
+join me and be a Facebook user.
+
+62
+00:04:01,740 --> 00:04:06,840
+So you're good to users, you capture the users, you lock them in, and you start to abuse
+
+63
+00:04:06,840 --> 00:04:12,220
+the users for your business customers, show them ads, and then you end up abusing the
+
+64
+00:04:12,220 --> 00:04:16,100
+business customers to extract more value from them for the shareholders, and then the
+
+65
+00:04:16,100 --> 00:04:17,200
+platform starts to rot.
+
+66
+00:04:17,300 --> 00:04:18,580
+It becomes a giant pile of shit.
+
+67
+00:04:19,040 --> 00:04:22,280
+And the way he talks about it is like when they start talking about metaverse, that's
+
+68
+00:04:22,280 --> 00:04:23,060
+where this happens.
+
+69
+00:04:23,820 --> 00:04:26,900
+We're seeing a similar thing happening with internet infrastructure,
+
+70
+00:04:27,520 --> 00:04:30,620
+but for this crowd, basically I want to talk about Web3.
+
+71
+00:04:32,360 --> 00:04:34,940
+So in Web3, I feel like we forgot the promise.
+
+72
+00:04:34,940 --> 00:04:39,280
+We were talking about privacy, but basically, Cypherpunk started with writing code.
+
+73
+00:04:39,500 --> 00:04:41,740
+They were like, we want communication privacy.
+
+74
+00:04:42,160 --> 00:04:46,580
+We want to define our privacy with cryptography, with remailers, signatures, electronic
+
+75
+00:04:46,580 --> 00:04:47,080
+money.
+
+76
+00:04:47,620 --> 00:04:52,200
+And basically, we want to communicate through borders without being under surveillance.
+
+77
+00:04:53,380 --> 00:05:00,080
+And now, 30 years later, basically, we captured all the users, all the builders, through
+
+78
+00:05:00,080 --> 00:05:02,520
+this promise of the communication privacy.
+
+79
+00:05:02,520 --> 00:05:02,720
+privacy.
+
+80
+00:05:03,020 --> 00:05:10,140
+But then we captured these users, builders, and then VCs kind of took over and
+
+81
+00:05:10,140 --> 00:05:13,000
+they started to optimise for what could be priced and sold.
+
+82
+00:05:13,760 --> 00:05:20,360
+And the thing is, basically, financial privacy can have a business model and can be
+
+83
+00:05:20,360 --> 00:05:21,300
+priced and sold.
+
+84
+00:05:21,520 --> 00:05:26,020
+But communication privacy for someone, let's say in Tehran, doesn't have a business
+
+85
+00:05:26,020 --> 00:05:26,380
+model.
+
+86
+00:05:27,500 --> 00:05:30,300
+And we forgot forgot about that.
+
+87
+00:05:30,380 --> 00:05:34,120
+Now you have privacy for enterprise, which I don't know exactly what that means.
+
+88
+00:05:34,800 --> 00:05:39,300
+But the people that need it, they still can't access it.
+
+89
+00:05:39,680 --> 00:05:42,720
+And this is not Cypherpunk anymore in my opinion.
+
+90
+00:05:44,040 --> 00:05:49,660
+So just to show what the gap is, so basically we start to build for the top of the stack.
+
+91
+00:05:49,820 --> 00:05:55,360
+We build for app layer, for protocol layer, for transport, which are all good.
+
+92
+00:05:55,480 --> 00:05:58,560
+Like we build wallets, dApps, L2s, IPFS.
+
+93
+00:05:58,880 --> 00:06:00,920
+We build like ENS, they're all good.
+
+94
+00:06:01,040 --> 00:06:01,760
+I'm not gonna lie.
+
+95
+00:06:02,220 --> 00:06:04,360
+But we forgot the bottom side.
+
+96
+00:06:04,520 --> 00:06:09,440
+So we forgot how if those bottom sides get cut down, nothing matters on top.
+
+97
+00:06:10,500 --> 00:06:12,160
+And it all just vanishes.
+
+98
+00:06:12,740 --> 00:06:18,540
+And this is not necessarily a failure of imagination of like, a technical failure.
+
+99
+00:06:18,680 --> 00:06:23,460
+This is a failure of imagination of who the adversary is and what extent they could
+
+100
+00:06:23,460 --> 00:06:23,940
+go.
+
+101
+00:06:26,460 --> 00:06:28,980
+And this is kind of like my personal story here.
+
+102
+00:06:29,200 --> 00:06:30,260
+So I'm Iranian diaspora.
+
+103
+00:06:30,580 --> 00:06:36,540
+I spent over a decade teaching Farsi speakers about crypto stack, tech stack, cryptography.
+
+104
+00:06:37,000 --> 00:06:40,700
+And when these blackouts happened, it was all worthless.
+
+105
+00:06:40,960 --> 00:06:43,020
+No one could use anything on Web3.
+
+106
+00:06:43,360 --> 00:06:45,320
+And I couldn't even reach my own family.
+
+107
+00:06:45,540 --> 00:06:47,240
+It's not like my message were blocked.
+
+108
+00:06:47,440 --> 00:06:48,500
+It was not being delivered.
+
+109
+00:06:50,780 --> 00:06:55,820
+And I ended up, after the initial shock that was gone, I started to receive rage coding.
+
+110
+00:06:56,020 --> 00:06:57,040
+I felt helpless.
+
+111
+00:06:57,180 --> 00:06:58,400
+I was like, I needed to do something.
+
+112
+00:06:59,000 --> 00:07:02,300
+And I started rage coding, and it wasn't necessarily for any financial future.
+
+113
+00:07:02,560 --> 00:07:04,960
+It was for a better now, for getting someone through.
+
+114
+00:07:05,920 --> 00:07:08,440
+And to be honest, I didn't have any hope that it was going to work.
+
+115
+00:07:08,540 --> 00:07:09,920
+It was just for my own sanity.
+
+116
+00:07:10,980 --> 00:07:16,400
+And then I put it out there, tweeted about this, and I saw people actually getting through.
+
+117
+00:07:16,400 --> 00:07:20,360
+people are getting to the internet through this software that I was building.
+
+118
+00:07:20,960 --> 00:07:26,040
+And around late February, when the full internet shutdown happened, everything went
+
+119
+00:07:26,040 --> 00:07:27,900
+silent, and I just broke.
+
+120
+00:07:28,020 --> 00:07:28,480
+I failed.
+
+121
+00:07:28,540 --> 00:07:29,800
+I felt like I was defeated.
+
+122
+00:07:30,500 --> 00:07:35,360
+Basically, I closed my laptop, walked for a few days, came back, looked at some of the
+
+123
+00:07:35,360 --> 00:07:40,740
+charts on those servers, because I was already donating to the anti-censorship protocols,
+
+124
+00:07:41,200 --> 00:07:43,660
+and I realized people from Myanmar are connecting.
+
+125
+00:07:43,660 --> 00:07:46,860
+people from Russia, China, even UK are going through this traffic.
+
+126
+00:07:47,400 --> 00:07:52,720
+But I made this application initially for Iranian users, but there were none of them.
+
+127
+00:07:53,900 --> 00:07:56,540
+So I started continuing the work.
+
+128
+00:07:56,600 --> 00:08:01,340
+I fixed bugs, I added more protocols, I read so many Chinese and Russian websites and
+
+129
+00:08:01,340 --> 00:08:05,360
+Telegram messages to understand how they get through these, and I kept adding these.
+
+130
+00:08:06,500 --> 00:08:10,880
+And later in May, when connection came back, it started working again.
+
+131
+00:08:10,880 --> 00:08:13,180
+I saw Iran in the charts again, and it made me so happy.
+
+132
+00:08:13,900 --> 00:08:15,080
+So I continued on this.
+
+133
+00:08:16,560 --> 00:08:22,160
+And just to say what this is, basically it's the idea of Moav, or mother of all VPNs,
+
+134
+00:08:22,160 --> 00:08:23,920
+is not really elegance.
+
+135
+00:08:23,980 --> 00:08:24,760
+It's redundancy.
+
+136
+00:08:26,520 --> 00:08:31,120
+So you can use basically one command to run all possible protocols that I could find.
+
+137
+00:08:31,240 --> 00:08:33,440
+So I wasn't going for the best VPN protocol.
+
+138
+00:08:33,760 --> 00:08:36,600
+I was going for all of them, any protocol that is out there.
+
+139
+00:08:36,600 --> 00:08:36,800
+there.
+
+140
+00:08:37,400 --> 00:08:43,240
+So you run one command, it sets up everything for you, and in security, a lot of times
+
+141
+00:08:43,240 --> 00:08:47,180
+we say the system is secure until there's one security hole and the hacker can get in.
+
+142
+00:08:47,480 --> 00:08:48,980
+I'm kind of looking the other way around.
+
+143
+00:08:49,220 --> 00:08:53,340
+The sensor has to block all the protocols, but you only need one to get through.
+
+144
+00:08:53,760 --> 00:08:55,000
+So this is kind of that way.
+
+145
+00:08:55,140 --> 00:09:00,920
+So any stranger can become like a VPN provider for the whole population, for the whole
+
+146
+00:09:00,920 --> 00:09:02,100
+neighborhood, for the whole household.
+
+147
+00:09:03,220 --> 00:09:07,980
+And Moav, like mother of all VPNs, started as a joke, but then it became the thesis
+
+148
+00:09:07,980 --> 00:09:09,660
+of this application.
+
+149
+00:09:11,120 --> 00:09:16,380
+And it only needs like a really small VPS or Raspberry Pi, you can set it up.
+
+150
+00:09:17,000 --> 00:09:22,220
+And the specific problem I was trying to solve then, it's really hard to explain for
+
+151
+00:09:22,220 --> 00:09:23,000
+people outside Iran.
+
+152
+00:09:23,200 --> 00:09:26,460
+So in an internet shutdown, it's not like everything's unplugged.
+
+153
+00:09:27,440 --> 00:09:30,660
+People inside started running scanners for the whole internet.
+
+154
+00:09:30,980 --> 00:09:33,940
+It's similar to like you looking at stars to find life.
+
+155
+00:09:34,180 --> 00:09:37,120
+They were like trying to ping some server that is alive for them.
+
+156
+00:09:37,620 --> 00:09:42,560
+And when sometimes they could, sometimes like one example was the Azure cloud in North
+
+157
+00:09:42,560 --> 00:09:42,940
+Africa.
+
+158
+00:09:43,100 --> 00:09:44,840
+Some IP range in there was pinging.
+
+159
+00:09:45,300 --> 00:09:48,640
+And then we have two really brutal problems.
+
+160
+00:09:48,920 --> 00:09:53,440
+One, can we get an IP address in that range, which is a technical problem for outside
+
+161
+00:09:53,440 --> 00:09:53,720
+Iran.
+
+162
+00:09:53,720 --> 00:09:56,760
+on, it's possible through brute force, whatever it means.
+
+163
+00:09:57,160 --> 00:10:00,980
+The other problem is when you get an IP address, you're basically beating the clock.
+
+164
+00:10:01,180 --> 00:10:03,500
+There is a time that that IP address would be blocked.
+
+165
+00:10:03,900 --> 00:10:07,140
+And you want to get traffic through as soon as possible.
+
+166
+00:10:07,820 --> 00:10:12,360
+And basically this one command, you already have configurations for your family, friends,
+
+167
+00:10:12,680 --> 00:10:18,960
+and also contributing to Tor, Snowflake, Conduit, and Syphon, all these to get traffic
+
+168
+00:10:18,960 --> 00:10:19,220
+through.
+
+169
+00:10:19,340 --> 00:10:22,640
+And then you you have a day that you come and there's no traffic, you notice that that
+
+170
+00:10:22,640 --> 00:10:24,240
+server has been, that IP has been blocked.
+
+171
+00:10:24,700 --> 00:10:27,180
+But for a few days, you gave internet to people that needed it.
+
+172
+00:10:29,060 --> 00:10:33,520
+And just to show how it works, basically there is one box every route out.
+
+173
+00:10:35,320 --> 00:10:38,540
+I just realized I modified these slides, but this is the older version.
+
+174
+00:10:39,080 --> 00:10:43,200
+So the blue box there, this box is Moav.
+
+175
+00:10:43,580 --> 00:10:49,240
+So basically, if you have inside Iran, China, Russia, most people on their phone have
+
+176
+00:10:49,240 --> 00:10:50,280
+some some kind of VPN apps.
+
+177
+00:10:50,540 --> 00:10:52,120
+And there is some collection here.
+
+178
+00:10:52,300 --> 00:10:56,060
+So whatever you have, in Moav, there is something for you to use.
+
+179
+00:10:56,220 --> 00:11:01,140
+At the same time, we're contributing to Syphon and Tor through Snowflake.
+
+180
+00:11:01,200 --> 00:11:06,180
+That means you become part of the infrastructure for anti-censorship internet.
+
+181
+00:11:07,440 --> 00:11:10,840
+And these are the parts I really love that it becomes part of the infrastructure.
+
+182
+00:11:18,980 --> 00:11:26,080
+And You get this terminal UI that helps you set up everything, and you have
+
+183
+00:11:26,080 --> 00:11:30,100
+an admin dashboard that gives you some information about what is happening on that server,
+
+184
+00:11:30,320 --> 00:11:34,560
+and you have a graph on a matrix really detailed in which countries, what protocols
+
+185
+00:11:34,560 --> 00:11:38,740
+are working, so you have a better sense of who is using your servers and how this traffic
+
+186
+00:11:38,740 --> 00:11:39,300
+is going through.
+
+187
+00:11:39,560 --> 00:11:42,980
+And that's where I was seeing, like, no, Iran and China and Myanmar, and I realized
+
+188
+00:11:42,980 --> 00:11:44,580
+people are actually using this.
+
+189
+00:11:47,520 --> 00:11:49,420
+And there's an arm race here.
+
+190
+00:11:49,860 --> 00:11:54,420
+So in a lot of these places, there is deep packet inspection.
+
+191
+00:11:54,800 --> 00:11:59,560
+They start to understand the packets and traffic, and it starts blocking obvious traffics,
+
+192
+00:11:59,640 --> 00:12:00,160
+like
+
+193
+00:12:01,400 --> 00:12:04,660
+OpenVPN, WireGuard, and these kind of things that are obvious gets blocked really fast
+
+194
+00:12:04,660 --> 00:12:05,540
+and one by one.
+
+195
+00:12:06,960 --> 00:12:10,400
+But we see that this creative resilience that routes around it.
+
+196
+00:12:10,960 --> 00:12:12,340
+So one of One of the things is
+
+197
+00:12:14,240 --> 00:12:17,900
+spoofing, which is a lot of these infrastructure need, let's say, the smart TVs.
+
+198
+00:12:18,040 --> 00:12:20,700
+They want smart TVs to be updated, but no one could have access to internet.
+
+199
+00:12:21,040 --> 00:12:23,800
+So they left update.samsung.com open.
+
+200
+00:12:23,980 --> 00:12:27,820
+You change the traffic to look like those updates, but goes through Moab server and
+
+201
+00:12:27,820 --> 00:12:29,440
+you can have access to internet.
+
+202
+00:12:29,940 --> 00:12:31,960
+Goose Relay is one of the ones that I really like.
+
+203
+00:12:33,100 --> 00:12:37,540
+Google was blocked, but Google infrastructure was open, some of the parts.
+
+204
+00:12:37,880 --> 00:12:42,420
+They use script.google.com to be able to route traffic through Google Google infrastructure.
+
+205
+00:12:43,100 --> 00:12:48,120
+And also, Ballet VPN is one of the ones I really love.
+
+206
+00:12:48,160 --> 00:12:51,060
+Ballet is one of the state-approved chat apps.
+
+207
+00:12:51,160 --> 00:12:52,080
+It's fully backdoored.
+
+208
+00:12:52,260 --> 00:12:57,460
+But people started using the WebRTC video call media there to get traffic through.
+
+209
+00:12:57,880 --> 00:13:03,340
+And it's similar to Protozoa, which is an academic paper that was used in China and
+
+210
+00:13:03,340 --> 00:13:03,560
+Russia.
+
+211
+00:13:03,920 --> 00:13:05,280
+And also, DNS tunnels.
+
+212
+00:13:05,420 --> 00:13:10,800
+DNS is is the last thing that the governments can kill, and you can still use that to
+
+213
+00:13:10,800 --> 00:13:11,960
+move around text.
+
+214
+00:13:12,860 --> 00:13:18,000
+And one of the things about this is these were mostly built by people inside these
+
+215
+00:13:18,920 --> 00:13:19,880
+internet shutdowns.
+
+216
+00:13:21,220 --> 00:13:26,340
+So I want to put this out there and talk about what's actually out there and what is
+
+217
+00:13:26,340 --> 00:13:26,540
+not.
+
+218
+00:13:26,740 --> 00:13:30,840
+And I want to be really honest here, because if I oversell any of these, people would
+
+219
+00:13:30,840 --> 00:13:31,280
+get hurt.
+
+220
+00:13:31,440 --> 00:13:32,760
+They actually trust that technology.
+
+221
+00:13:33,880 --> 00:13:38,840
+Another example is is a GitHub over a channel that GitHub was also filtered.
+
+222
+00:13:39,340 --> 00:13:41,420
+GitHub CI was open.
+
+223
+00:13:41,580 --> 00:13:46,520
+So people did basically TCP over Git, which means they would commit a Git with a URL.
+
+224
+00:13:46,780 --> 00:13:50,440
+The GitHub action would download the file, and they could clone and pull the server.
+
+225
+00:13:50,560 --> 00:13:52,280
+That was another interesting way of doing this.
+
+226
+00:13:52,760 --> 00:13:57,780
+The feed is something that saved a lot of lives that used Telegram or news over DNS.
+
+227
+00:13:57,880 --> 00:14:01,960
+So you could get some news about which regions of the city you have to evacuate on some
+
+228
+00:14:01,960 --> 00:14:02,220
+others.
+
+229
+00:14:03,080 --> 00:14:04,580
+Netagram I'll mention in a minute.
+
+230
+00:14:05,260 --> 00:14:10,500
+A few call to actions here is more, so there is like Starlink neighborhood sharing,
+
+231
+00:14:10,700 --> 00:14:15,080
+which there's a NASnet and some other similar projects that you could share your Starlink
+
+232
+00:14:15,080 --> 00:14:17,520
+connection to your neighborhood or through your friends that you want.
+
+233
+00:14:17,740 --> 00:14:20,420
+But there is a high risk of being arrested if it gets detected.
+
+234
+00:14:21,360 --> 00:14:24,940
+We know that there is like power line networking possible.
+
+235
+00:14:25,940 --> 00:14:30,240
+Why don't we have similar networks into sharing internet to the building without that
+
+236
+00:14:30,240 --> 00:14:32,080
+detection, without using the other infrastructure.
+
+237
+00:14:32,440 --> 00:14:35,320
+This is more part of pirating the infrastructure that exists.
+
+238
+00:14:36,500 --> 00:14:42,480
+We've seen dial-up revival in Asia 2011 that they used dial-ups to be able to create
+
+239
+00:14:42,480 --> 00:14:43,720
+new connections.
+
+240
+00:14:44,880 --> 00:14:47,140
+Offline payments also have a whole slide about this.
+
+241
+00:14:48,220 --> 00:14:53,440
+One thing to know is the tools that worked were actually built by people living inside
+
+242
+00:14:53,440 --> 00:14:54,120
+these blackouts.
+
+243
+00:14:54,620 --> 00:14:58,500
+There are research around this which they they call this grassroots infrastructure survival
+
+244
+00:14:58,500 --> 00:14:59,260
+work,
+
+245
+00:15:00,040 --> 00:15:02,280
+which we need to look into more in this space.
+
+246
+00:15:04,160 --> 00:15:08,720
+And so Netagram is another project I rage-coded in the same period.
+
+247
+00:15:08,980 --> 00:15:13,800
+So the only time in that period that someone could connect was calling from inside landline
+
+248
+00:15:13,800 --> 00:15:16,160
+to outside, actual landline calls.
+
+249
+00:15:16,500 --> 00:15:21,060
+And I was still working on this VPN, and I wanted them to test.
+
+250
+00:15:22,480 --> 00:15:27,940
+So I was like, maybe there is a way to use phone to move data.
+
+251
+00:15:28,340 --> 00:15:30,100
+And that's where I built Netagram.
+
+252
+00:15:30,220 --> 00:15:32,380
+Netagram, Neta in Farsi means voice.
+
+253
+00:15:32,800 --> 00:15:37,460
+And basically the idea is like you paste your configuration like any data you want here,
+
+254
+00:15:37,700 --> 00:15:43,200
+it turns it into voice, and then it uses the same technology as NASA uses for Voyager
+
+255
+00:15:43,200 --> 00:15:47,840
+from Interstellar to communicate over the phone because phone's noisy, you need to be
+
+256
+00:15:47,840 --> 00:15:48,660
+able to convert that.
+
+257
+00:15:49,620 --> 00:15:50,660
+It's really slow.
+
+258
+00:15:50,860 --> 00:15:53,560
+Also, they need internet to load this first time.
+
+259
+00:15:54,020 --> 00:15:57,700
+It works fully offline, even has an NPM package you can use.
+
+260
+00:15:58,160 --> 00:16:05,220
+And it might take around six minutes for one kilobyte, but still, it works.
+
+261
+00:16:06,420 --> 00:16:10,160
+This is another, this is where a friend of mine called, this is math scientist shit,
+
+262
+00:16:10,160 --> 00:16:11,660
+and that's where I got this word from.
+
+263
+00:16:13,900 --> 00:16:18,940
+And these are something that I want to also talk about in this Web3 conference, more
+
+264
+00:16:18,940 --> 00:16:20,620
+offline payments.
+
+265
+00:16:20,860 --> 00:16:23,780
+So a signed transaction is just data, right?
+
+266
+00:16:24,200 --> 00:16:28,340
+Like, you should be able to, like, use your wallet, sign a transaction, send it with
+
+267
+00:16:28,340 --> 00:16:32,680
+a carrier pigeon, Netagram, like, Bluetooth, whatever, and then somewhere, how I say,
+
+268
+00:16:32,720 --> 00:16:34,420
+online, you should be able to broadcast it.
+
+269
+00:16:35,540 --> 00:16:38,520
+And it's kind of embarrassing that we don't have it right now.
+
+270
+00:16:38,520 --> 00:16:42,720
+Like with Bitcoin, there's partially signed Bitcoin transaction that it kind of is,
+
+271
+00:16:42,840 --> 00:16:43,760
+it works.
+
+272
+00:16:44,180 --> 00:16:47,500
+We have Cashew, which is like a closest to what I have in mind.
+
+273
+00:16:47,820 --> 00:16:50,380
+It's Bitcoin only and the mint needs to be online.
+
+274
+00:16:50,980 --> 00:16:55,640
+But for EVM wallets like Metamask, you can't even build an offline transaction.
+
+275
+00:16:55,720 --> 00:16:57,780
+If you're offline, you cannot even build a transaction.
+
+276
+00:16:58,120 --> 00:17:01,500
+Which it because it wants to get non-gas estimate.
+
+277
+00:17:01,580 --> 00:17:05,220
+There are all these technical possibility there, but we don't have it.
+
+278
+00:17:05,560 --> 00:17:09,960
+And even if, let's say if you do this, you cannot export that data to give it to your
+
+279
+00:17:09,960 --> 00:17:13,100
+friends, to your, to another gram, to other ways to broadcast it.
+
+280
+00:17:13,300 --> 00:17:15,760
+And it's really embarrassing in my opinion.
+
+281
+00:17:16,180 --> 00:17:19,940
+And that ends stablecoins even not feasible to do offline.
+
+282
+00:17:20,620 --> 00:17:24,040
+I know there is like some trust anchors, like double spending, there are these issues,
+
+283
+00:17:24,140 --> 00:17:30,160
+but the small value payments can work today and they can save lives in these regions.
+
+284
+00:17:30,880 --> 00:17:35,560
+It's not about just the war time or internet shutdowns.
+
+285
+00:17:35,580 --> 00:17:39,460
+We've seen in Spain and Portugal, there was days long power outages.
+
+286
+00:17:39,580 --> 00:17:44,660
+In those, your wallets do not work, even if you have a way to communicate, because you
+
+287
+00:17:44,660 --> 00:17:47,260
+don't have internet on those devices.
+
+288
+00:17:48,080 --> 00:17:52,000
+And basically, my ask here is, if you're working on a wallet, not necessarily a new
+
+289
+00:17:52,000 --> 00:17:53,520
+wallet, I don't want a new wallet for this.
+
+290
+00:17:53,560 --> 00:17:58,220
+I want Metamask, Rabi, all these, to have an option to export your signed transaction,
+
+291
+00:17:58,220 --> 00:17:59,660
+to use in other means.
+
+292
+00:18:00,080 --> 00:18:06,920
+And if you can, using ZK, escrows, state channels, make it possible today to do $100,
+
+293
+00:18:08,420 --> 00:18:10,800
+maximum $100 of offline transactions.
+
+294
+00:18:10,980 --> 00:18:15,620
+Because a $5 transaction can buy food in these regions, but at these points, banks are
+
+295
+00:18:15,620 --> 00:18:18,940
+out, internet is out, there is no way to do value transfer.
+
+296
+00:18:21,200 --> 00:18:23,600
+And another one is we have pop-up cities.
+
+297
+00:18:23,920 --> 00:18:24,880
+We run pop-up cities.
+
+298
+00:18:25,020 --> 00:18:25,880
+Why not pop-up mesh?
+
+299
+00:18:25,880 --> 00:18:26,080
+mesh.
+
+300
+00:18:26,660 --> 00:18:32,580
+So why do we use Discord in these when we have Delta Chat, Metrix, Jitsi, we have BChat,
+
+301
+00:18:32,880 --> 00:18:37,900
+and we have all these so we can have a network like this that has its own payment network
+
+302
+00:18:37,900 --> 00:18:38,440
+and everything.
+
+303
+00:18:38,680 --> 00:18:42,580
+Payment network for this kind of situation doesn't need to go through the network, through
+
+304
+00:18:42,580 --> 00:18:43,020
+the internet.
+
+305
+00:18:43,420 --> 00:18:44,680
+And there are some relays.
+
+306
+00:18:45,480 --> 00:18:50,360
+Some interesting thing, so did you know there is two mesh networks already here and
+
+307
+00:18:50,360 --> 00:18:51,580
+you're not even aware of?
+
+308
+00:18:51,580 --> 00:18:56,900
+One is Bchat, which is only me and Florian from Freedom Browser.
+
+309
+00:18:57,140 --> 00:18:58,820
+That means every day we say yo.
+
+310
+00:19:00,100 --> 00:19:03,820
+And also yesterday I have a Meshastic node with me which uses LoRa technology.
+
+311
+00:19:04,400 --> 00:19:09,380
+And yesterday I was able to connect to What's Love from Logos.
+
+312
+00:19:09,380 --> 00:19:10,220
+And I went to their office.
+
+313
+00:19:10,360 --> 00:19:14,300
+And they're trying to do really interesting ways of using this mesh.
+
+314
+00:19:14,540 --> 00:19:16,780
+And that's one of the parts I came to this space.
+
+315
+00:19:16,920 --> 00:19:17,860
+These experimentations.
+
+316
+00:19:17,860 --> 00:19:19,400
+This crazy shit that we want to build.
+
+317
+00:19:20,940 --> 00:19:25,520
+So let's for the next pop-up CD have our own mesh, have our own chat, and after we're
+
+318
+00:19:25,520 --> 00:19:28,940
+done, it all evaporates and we don't need anything else.
+
+319
+00:19:29,540 --> 00:19:35,200
+And that makes people to build better tools, be more accessible, have these apps if
+
+320
+00:19:35,200 --> 00:19:36,960
+the internet goes down, so be able to use them.
+
+321
+00:19:39,880 --> 00:19:45,340
+And back to the activist morale, you don't have to win the VPN and internet censorship.
+
+322
+00:19:45,340 --> 00:19:49,500
+You just have to make it expensive for the sensor, for the government to sensor you.
+
+323
+00:19:49,880 --> 00:19:51,280
+And we've seen this before.
+
+324
+00:19:51,440 --> 00:19:55,680
+Like two decades ago, they only started to block DNS queries.
+
+325
+00:19:56,000 --> 00:19:59,620
+And people started building the DNS over HTTPS, DNS tunnels.
+
+326
+00:19:59,980 --> 00:20:04,080
+Then it was like deep packet inspection fingerprinting that you cannot go to like Facebook
+
+327
+00:20:04,080 --> 00:20:04,500
+.com.
+
+328
+00:20:04,640 --> 00:20:07,380
+People started using proxies and SNI spoofing.
+
+329
+00:20:07,580 --> 00:20:13,220
+And now we have like IP blocks, which we use Cloudflare and CloudFront to like bypass
+
+330
+00:20:13,220 --> 00:20:13,660
+those.
+
+331
+00:20:13,660 --> 00:20:18,940
+For the total blackouts, if we create those mesh networks, we don't need a global wide
+
+332
+00:20:18,940 --> 00:20:20,100
+internet.
+
+333
+00:20:20,360 --> 00:20:24,100
+We just need this local mesh that works and they can just communicate and live their
+
+334
+00:20:24,100 --> 00:20:24,380
+lives.
+
+335
+00:20:24,840 --> 00:20:30,440
+This would really save lives and we just need to keep raising the price on censorship.
+
+336
+00:20:31,800 --> 00:20:35,700
+And one thing I learned about this last few months is the community is the infrastructure,
+
+337
+00:20:35,900 --> 00:20:36,940
+it's not the side effect.
+
+338
+00:20:36,940 --> 00:20:43,480
+And while I was making Netagram, I was way beyond my knowledge on signal processing.
+
+339
+00:20:43,880 --> 00:20:48,920
+Someone showed me a few papers about Voyager, how they use this, and that actually made
+
+340
+00:20:48,920 --> 00:20:49,720
+Netagram possible.
+
+341
+00:20:50,580 --> 00:20:52,880
+There were developers that are outside there.
+
+342
+00:20:53,060 --> 00:20:58,160
+There was actually someone named developer that helped me with more of making it more
+
+343
+00:20:58,160 --> 00:20:58,460
+secure.
+
+344
+00:20:58,820 --> 00:21:01,440
+I don't even know who that person is, but they helped me.
+
+345
+00:21:02,040 --> 00:21:06,280
+They're activists, like there are so many people inside Iran and China that helped me
+
+346
+00:21:06,280 --> 00:21:08,660
+test these, in the situations that I could not test.
+
+347
+00:21:08,960 --> 00:21:10,260
+And also translators.
+
+348
+00:21:10,340 --> 00:21:13,200
+This whole community is the infrastructure.
+
+349
+00:21:13,980 --> 00:21:19,240
+And just, we should be aware that these tools would die the moment the people maintaining
+
+350
+00:21:19,240 --> 00:21:20,000
+them burn out.
+
+351
+00:21:20,240 --> 00:21:21,640
+In March I almost did.
+
+352
+00:21:21,840 --> 00:21:23,820
+So take care of each other in these situations.
+
+353
+00:21:25,040 --> 00:21:30,520
+And just to say where we're taking MoAV, like I'm taking MoAV in that sense, is, so
+
+354
+00:21:30,520 --> 00:21:35,180
+the idea was like it helps everyone to get access to internet for the VPN.
+
+355
+00:21:35,760 --> 00:21:38,060
+But then I realized, well, we have all these protocols.
+
+356
+00:21:38,300 --> 00:21:43,560
+We can have a Moav client to use all these protocols and use the ones that actually
+
+357
+00:21:43,560 --> 00:21:44,380
+get through.
+
+358
+00:21:45,140 --> 00:21:49,900
+So if you're in a region that you want to test it or if you just want to test it, let
+
+359
+00:21:49,900 --> 00:21:50,160
+me know.
+
+360
+00:21:50,200 --> 00:21:52,220
+I can send you VPN configs from these test servers.
+
+361
+00:21:52,480 --> 00:21:55,140
+It's easy for you to also run it, but I can also provide that.
+
+362
+00:21:55,140 --> 00:21:55,340
+that.
+
+363
+00:21:55,600 --> 00:22:00,160
+Another thing I want to do is try tougher transfer layers, more VPNs.
+
+364
+00:22:00,180 --> 00:22:05,100
+If you know any exotic VPNs you want to add, put the GitHub issues, me and Cloud get
+
+365
+00:22:05,100 --> 00:22:05,400
+on it.
+
+366
+00:22:06,460 --> 00:22:08,380
+I want to implement NIM and Sentinel,
+
+367
+00:22:09,140 --> 00:22:12,340
+and recently I was talking Gnosis VPN as a relayer.
+
+368
+00:22:12,780 --> 00:22:15,140
+The only thing is I don't want to add complexity.
+
+369
+00:22:15,360 --> 00:22:19,260
+I want to keep the server running to any non-tech he can run those servers, so any non
+
+370
+00:22:19,260 --> 00:22:23,620
+-tech person with Linux or Raspberry Pi could become VPN infrastructure.
+
+371
+00:22:25,100 --> 00:22:27,860
+I just want to abstract away the key management and everything from that.
+
+372
+00:22:30,520 --> 00:22:33,780
+Yeah, so, and the other thing is I want to be able to create a cluster.
+
+373
+00:22:33,980 --> 00:22:37,720
+There's someone actually helping me from Web3 privacy talk that we talked to have a
+
+374
+00:22:37,720 --> 00:22:42,520
+secure way of running clusters of these servers so a lot of people can request configurations
+
+375
+00:22:42,520 --> 00:22:43,380
+on Telegram.
+
+376
+00:22:47,060 --> 00:22:53,720
+That's Basically, a call to action on this 3-inch room is just to know that the tool
+
+377
+00:22:53,720 --> 00:22:57,600
+that breaks in the crisis that it was built for is worse than no tool, because someone
+
+378
+00:22:57,600 --> 00:22:59,820
+trusts it for it to work.
+
+379
+00:23:00,040 --> 00:23:01,980
+And build for the people that gets cut off.
+
+380
+00:23:02,520 --> 00:23:07,160
+So if you have a small VPS or Raspberry Pi, deploy Moav today.
+
+381
+00:23:07,340 --> 00:23:09,660
+That's only what it takes, this command.
+
+382
+00:23:10,800 --> 00:23:13,240
+And it runs conduit, snowflake.
+
+383
+00:23:13,300 --> 00:23:14,920
+You already become part of the infrastructure.
+
+384
+00:23:14,920 --> 00:23:19,700
+structure, and before you go to sleep, someone behind these walls is breathing through
+
+385
+00:23:19,700 --> 00:23:21,300
+your bandwidth.
+
+386
+00:23:22,220 --> 00:23:26,640
+And build for the harder problems, like just don't build another yet-defi project, just
+
+387
+00:23:26,640 --> 00:23:29,080
+build the plumbing for the next internet shutdown.
+
+388
+00:23:29,880 --> 00:23:32,340
+Do work on offline payments, we need those.
+
+389
+00:23:32,420 --> 00:23:37,880
+Work on mesh, exotic routing, those hardware layer that is out of our control.
+
+390
+00:23:37,880 --> 00:23:38,080
+all.
+
+391
+00:23:38,800 --> 00:23:43,600
+And build it now, because the next crisis is inevitable.
+
+392
+00:23:43,860 --> 00:23:44,520
+It's going to happen.
+
+393
+00:23:45,180 --> 00:23:46,360
+And also fund the gap.
+
+394
+00:23:46,580 --> 00:23:50,960
+So if you have any treasuries, any grants, bounties, fund them toward this project.
+
+395
+00:23:51,140 --> 00:23:53,680
+Like, Maxonet is one of the big ones that is helping a lot of people.
+
+396
+00:23:53,960 --> 00:23:58,960
+Direct to Sell is trying to get satellites and Starlink to help with a lot of people
+
+397
+00:23:58,960 --> 00:23:59,620
+getting communication.
+
+398
+00:24:01,580 --> 00:24:07,240
+And another thing, if you have access to some funds for the next hackathon prize, just
+
+399
+00:24:07,240 --> 00:24:11,640
+put put one crazy idea there and say, create a mesh, create an offline transaction that
+
+400
+00:24:11,640 --> 00:24:13,300
+goes through this other random protocol.
+
+401
+00:24:13,680 --> 00:24:18,580
+Make it exciting for a lot of people to be able to bring out their math scientists app.
+
+402
+00:24:19,680 --> 00:24:20,920
+And basically...
+
+403
+00:24:20,920 --> 00:24:24,860
+I'm going to take it, if you want to take a picture.
+
+404
+00:24:25,420 --> 00:24:25,620
+Yeah.
+
+405
+00:24:25,840 --> 00:24:30,720
+So basically what I'm asking is the cypherpunks end their manifesto by cypherpunks write
+
+406
+00:24:30,720 --> 00:24:30,980
+code.
+
+407
+00:24:31,380 --> 00:24:36,380
+They valued privacy, they wrote code that became, right now, Tor, became Signal, became
+
+408
+00:24:36,380 --> 00:24:37,520
+a lot of things that we use.
+
+409
+00:24:37,640 --> 00:24:40,140
+We need to continue that because we inherited that.
+
+410
+00:24:40,840 --> 00:24:43,040
+And basically what I'm asking is, like, become the infrastructure.
+
+411
+00:24:43,280 --> 00:24:48,420
+Run Moab and, yeah, thank you for being here on Almost Half Dark.
+
+412
+00:24:48,680 --> 00:24:49,200
+Thank you.
+
+413
+00:24:58,880 --> 00:24:59,600
+Any questions?
+
+414
+00:25:06,440 --> 00:25:07,220
+Okay, thank you.
