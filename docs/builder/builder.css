@@ -91,7 +91,25 @@
   font-size: 13px; font-weight: 700;
 }
 .p2-step .p2-field { margin: 0; }
-.p2-simple-deck { display: grid; grid-template-columns: 110px 1fr; gap: 8px; }
+/* "start from the demo" starter row atop the simple card */
+.p2-simple-start {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--line);
+}
+
+/* the Simple view's readiness summary (replaces the raw JSON panel) */
+.p2-simple-summary { display: flex; flex-direction: column; gap: 10px; }
+.p2-sum-badge {
+  align-self: flex-start; padding: 6px 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 700;
+  color: var(--muted); border: 1px solid var(--line); background: var(--panel-2);
+}
+.p2-sum-badge.is-ready { color: #04121a; border-color: transparent; background: var(--accent); }
+.p2-sum-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.p2-sum-list li { display: flex; align-items: baseline; gap: 9px; font-size: 13.5px; color: var(--muted); }
+.p2-sum-list li .m { width: 16px; text-align: center; color: var(--muted); flex: none; }
+.p2-sum-list li.is-done { color: var(--fg); }
+.p2-sum-list li.is-done .m { color: var(--accent); }
 
 /* capture panel */
 .p2-capture {

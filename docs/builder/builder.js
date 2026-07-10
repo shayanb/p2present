@@ -328,6 +328,11 @@ function inferDeckType(url) {
   return null;
 }
 
+const DECK_KIND = { pdf: 'PDF deck', html: 'HTML deck', embed: 'embedded slides (display-only)' };
+function deckKindHint() {
+  return $('s-deck').value.trim() ? `Detected: ${DECK_KIND[state.deck.type] || state.deck.type}` : '';
+}
+
 function bindSimple() {
   $('s-title').addEventListener('input', () => { state.title = $('s-title').value; $('f-title').value = state.title; updatePreview(); });
   $('s-video').addEventListener('input', () => {
@@ -338,29 +343,52 @@ function bindSimple() {
     $('s-video-kind').textContent = url.trim() ? `Detected: ${VIDEO_KIND[state.video.sources[0].provider]}` : '';
     renderVideo(); updatePreview();
   });
-  $('s-deck-type').addEventListener('change', () => { state.deck.type = $('s-deck-type').value; $('f-deck-type').value = state.deck.type; renderDeck(); updatePreview(); });
   $('s-deck').addEventListener('input', () => {
     const url = $('s-deck').value;
     if (!state.deck.sources.length) state.deck.sources = [{ protocol: 'https', src: '' }];
     state.deck.sources[0].src = url;
     state.deck.sources[0].protocol = inferProtocol(url);
-    // auto-pick the deck type from the URL (PDF / Google-Slides embed / HTML)
+    // deck type is fully auto-detected in Simple (PDF / Google-Slides embed / HTML)
     const t = inferDeckType(url);
-    if (t && t !== state.deck.type) { state.deck.type = t; $('s-deck-type').value = t; $('f-deck-type').value = t; }
+    if (t && t !== state.deck.type) { state.deck.type = t; $('f-deck-type').value = t; }
+    $('s-deck-kind').textContent = deckKindHint();
     renderDeck(); updatePreview();
   });
   $('s-chapters-apply').addEventListener('click', applyChapters);
   $('s-chapters-auto').addEventListener('click', autoDetectChapters);
+  $('s-load-demo')?.addEventListener('click', loadDemoPdf);
 }
 
 function fillSimple() {
   $('s-title').value = state.title || '';
   $('s-video').value = state.video.sources?.[0]?.src || '';
   $('s-deck').value = state.deck.sources?.[0]?.src || '';
-  $('s-deck-type').value = state.deck.type || 'pdf';
+  $('s-deck-kind').textContent = deckKindHint();
   const p = state.video.sources?.[0]?.provider;
   $('s-video-kind').textContent = ($('s-video').value.trim() && p) ? `Detected: ${VIDEO_KIND[p] || p}` : '';
 }
+
+// The Simple view's friendly readiness card (replaces the raw JSON + validator
+// output): what's in, what's missing, and whether it's ready to play.
+function renderSimpleSummary(manifest) {
+  const box = $('simple-summary');
+  if (!box) return;
+  const hasVideo = !!manifest.video?.sources?.length;
+  const hasDeck = !!manifest.deck?.sources?.length;
+  const cues = manifest.timing?.length || 0;
+  const ready = hasVideo && hasDeck;
+  const li = (done, text) =>
+    `<li class="${done ? 'is-done' : ''}"><span class="m">${done ? '✓' : '○'}</span>${text}</li>`;
+  const kind = hasVideo ? (VIDEO_KIND[state.video.sources[0].provider] || 'video') : '';
+  box.innerHTML =
+    `<div class="p2-sum-badge${ready ? ' is-ready' : ''}">${ready ? '✓ Ready to play' : 'Add two links and it plays'}</div>` +
+    '<ul class="p2-sum-list">' +
+    li(hasVideo, hasVideo ? `Video — ${escapeText(kind)}` : 'Paste your talk video') +
+    li(hasDeck, hasDeck ? `Slides — ${escapeText(DECK_KIND[state.deck.type] || state.deck.type)}` : 'Paste your slides') +
+    li(cues > 1, cues > 1 ? `Timing — ${cues} cues` : 'Timing — add chapters or capture (optional)') +
+    '</ul>';
+}
+const escapeText = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 function setView(simple) {
   $('builder-main').classList.toggle('is-simple', simple);
@@ -451,6 +479,7 @@ function updatePreview() {
     list.hidden = true; list.innerHTML = '';
   }
   updateSignStatus(manifest);
+  renderSimpleSummary(manifest);
   return errors;
 }
 

@@ -67,6 +67,31 @@ npx wrangler deploy
 `wrangler deploy` prints your Worker URL (e.g.
 `https://p2present.<account>.workers.dev`). That URL is your **service base**.
 
+### Or: deploy on git push (Workers Builds)
+
+If the GitHub repo is connected to the Worker (dashboard → your Worker →
+**Settings → Build**), every push to the production branch deploys it — no
+local wrangler needed. Configure the build like this:
+
+- **Root directory:** `/service`
+- **Deploy command:** `npx wrangler deploy`
+- **Build watch paths:** `service/**` — so site-only pushes (docs/) don't
+  trigger a Worker deploy.
+
+Two things still have to be true for the build to succeed:
+
+1. The **KV namespace ids in `wrangler.toml` must be real** (namespace ids are
+   identifiers, not secrets — commit them). Create the namespaces once, either
+   in the dashboard (Storage & Databases → KV) or locally with
+   `npx wrangler kv namespace create P2_KV` (+ `--preview`), then replace the
+   `REPLACE_WITH_…` placeholders.
+2. **Secrets go in the dashboard**, not the repo: your Worker → Settings →
+   Variables and Secrets (e.g. `IPFS_PIN_TOKEN`). Non-secret `[vars]` stay in
+   `wrangler.toml`.
+
+Pull requests get preview deployments automatically; the production branch
+(usually `main`) deploys live.
+
 ### Point a domain at it (e.g. `p2present.com`)
 
 Add your domain to Cloudflare, then uncomment the `routes` block in

@@ -126,6 +126,13 @@ footer.site .brand .logo { width: 24px; height: 24px; border-radius: 7px; }
   box-shadow: 0 4px 22px rgba(124,107,255,.35);
 }
 .top nav a.cta:hover { text-decoration: none; filter: brightness(1.08); }
+/* secondary CTA (Builder) — same pill weight, outline instead of the neon fill */
+.top nav a.cta-alt {
+  color: var(--fg); font-weight: 600;
+  background: rgba(255,255,255,.04); border-color: var(--line-2);
+  box-shadow: none;
+}
+.top nav a.cta-alt:hover { border-color: var(--cyan); color: var(--cyan); filter: none; }
 @media (max-width: 620px) { .top nav .hide-sm { display: none; } }
 
 /* ============================================================= *

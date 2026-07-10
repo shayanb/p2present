@@ -50,37 +50,42 @@
         <button type="button" id="mode-advanced" class="p2-mode-tab" role="tab" aria-selected="false">⚙ Advanced</button>
       </div>
 
-      <!-- SIMPLE: paste a video, paste your slides, grab chapters, capture timing. -->
+      <!-- SIMPLE: paste a video, paste your slides — everything else is detected.
+           Chapters/timing are one optional step; the raw JSON stays in Advanced. -->
       <div class="p2-simp p2-simple-flow">
         <div class="p2-card p2-simple-card" open>
-          <div class="p2-step">
-            <span class="p2-step-n">1</span>
-            <label class="p2-field"><span>Title</span><input id="s-title" type="text" placeholder="My talk" /></label>
+          <div class="p2-simple-start">
+            <span class="p2-hint">New here?</span>
+            <button type="button" class="p2-load" id="s-load-demo">▶ Start from the demo talk</button>
           </div>
           <div class="p2-step">
-            <span class="p2-step-n">2</span>
-            <label class="p2-field"><span>Video URL</span>
-              <input id="s-video" type="text" inputmode="url" spellcheck="false" placeholder="YouTube link / ID · https://…/talk.mp4 · ipfs://CID · magnet:?xt=…" />
+            <span class="p2-step-n">1</span>
+            <label class="p2-field"><span>Video</span>
+              <input id="s-video" type="text" inputmode="url" spellcheck="false" placeholder="Paste your talk — YouTube link, .mp4 URL, ipfs:// or magnet:" />
               <small class="p2-hint" id="s-video-kind"></small>
             </label>
           </div>
           <div class="p2-step">
+            <span class="p2-step-n">2</span>
+            <label class="p2-field"><span>Slides</span>
+              <input id="s-deck" type="text" inputmode="url" spellcheck="false" placeholder="Paste your slides — .pdf URL, Google Slides link, or deck HTML" />
+              <small class="p2-hint" id="s-deck-kind"></small>
+            </label>
+          </div>
+          <div class="p2-step">
             <span class="p2-step-n">3</span>
-            <div class="p2-field"><span>Slides</span>
-              <div class="p2-simple-deck">
-                <select id="s-deck-type" aria-label="Slides type"><option value="pdf">PDF</option><option value="html">HTML</option><option value="embed">Embed</option></select>
-                <input id="s-deck" type="text" inputmode="url" spellcheck="false" placeholder="https://…/slides.pdf · ar://TXID/slides.pdf · ipfs://CID/…" />
-              </div>
-            </div>
+            <label class="p2-field"><span>Title <span class="p2-hint">(optional)</span></span>
+              <input id="s-title" type="text" placeholder="My talk" />
+            </label>
           </div>
           <div class="p2-step">
             <span class="p2-step-n">4</span>
-            <div class="p2-field"><span>Chapters → slide timing <span class="p2-hint">(optional)</span></span>
+            <div class="p2-field"><span>Timing <span class="p2-hint">(optional — slides flip with the talk)</span></span>
               <div class="p2-row-actions">
                 <button type="button" class="p2-load" id="s-chapters-auto">✨ Auto-detect chapters</button>
                 <span class="p2-hint" id="s-chapters-status"></span>
               </div>
-              <textarea id="s-chapters" rows="4" spellcheck="false" placeholder="Paste a chapter list — one per line:&#10;0:00 Title slide&#10;1:24 The problem&#10;3:10 The fix"></textarea>
+              <textarea id="s-chapters" rows="3" spellcheck="false" placeholder="…or paste the video's chapter list, one per line:&#10;0:00 Title slide&#10;1:24 The problem"></textarea>
               <button type="button" class="p2-load" id="s-chapters-apply">Use these as timing</button>
             </div>
           </div>
@@ -155,8 +160,8 @@
       <!-- Timing capture — shared by both views (it's the heart of the simple flow
            and a power tool in the advanced one). -->
       <details class="p2-card p2-capture-card" open>
-        <summary>🎬 Timing capture</summary>
-        <p class="p2-hint">Play the video, navigate to each slide, and stamp the moment it should change. Needs a loadable video + slides.</p>
+        <summary>🎬 Capture timing <span class="p2-hint">(optional)</span></summary>
+        <p class="p2-hint">Play the video, flip to each slide, stamp the moment it changes.</p>
         <div class="p2-capture" id="capture-panel" hidden>
           <div id="capture-mount" class="p2-capture-mount"></div>
           <div class="p2-row-actions">
@@ -240,19 +245,21 @@
       </details>
     </section>
 
-    <!-- RIGHT: live JSON + actions -->
-    <aside class="p2-preview" aria-label="JSON preview and actions">
-      <div class="p2-preview-head">
+    <!-- RIGHT: live JSON + actions. Simple mode swaps the raw JSON + validator
+         noise for a friendly readiness summary; Advanced gets the full preview. -->
+    <aside class="p2-preview" aria-label="Preview and actions">
+      <div class="p2-preview-head p2-adv">
         <strong>p2present.json</strong>
         <span class="p2-valid" id="valid-badge">…</span>
       </div>
+      <div class="p2-simple-summary p2-simp" id="simple-summary" aria-live="polite"></div>
       <div class="p2-actions">
         <button type="button" class="p2-load p2-primary" id="act-open">▶ Open in player</button>
         <button type="button" class="p2-load" id="act-copy">📋 Copy JSON</button>
         <button type="button" class="p2-load" id="act-download">⬇ Download</button>
       </div>
-      <ul class="p2-errors" id="errors" hidden></ul>
-      <pre class="p2-json" id="json"><code></code></pre>
+      <ul class="p2-errors p2-adv" id="errors" hidden></ul>
+      <pre class="p2-json p2-adv" id="json"><code></code></pre>
     </aside>
   </main>
 
