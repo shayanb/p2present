@@ -480,7 +480,24 @@ function updatePreview() {
   }
   updateSignStatus(manifest);
   renderSimpleSummary(manifest);
+  updateSimpleSteps(manifest);
   return errors;
+}
+
+// Mark the Simple steps done as they're filled: the number badge flips to an
+// accent ✓ and the input picks up an accent border — instant "that worked" cue.
+function updateSimpleSteps(manifest) {
+  const mark = (stepId, done) => {
+    const step = $(stepId);
+    if (!step) return;
+    step.classList.toggle('is-done', done);
+    const n = step.querySelector('.p2-step-n');
+    if (n) n.textContent = done ? '✓' : (n.dataset.n || n.textContent);
+  };
+  mark('s-step-video', !!manifest.video?.sources?.length);
+  mark('s-step-deck', !!manifest.deck?.sources?.length);
+  mark('s-step-title', !!(manifest.title || '').trim());
+  mark('s-step-timing', (manifest.timing?.length || 0) > 1);
 }
 
 // --- signing (Phase 8) ------------------------------------------------------
@@ -670,7 +687,12 @@ async function toggleCapture() {
     const mount = $('capture-mount'); mount.innerHTML = '';
     capturePlayer = new Player(manifest, mount, { captureMode: true });
     await capturePlayer.mount();
-    $('capture-status').textContent = 'Play the video, navigate the slides, then stamp.';
+    // UNLINK sync while capturing: linked mode would drive the deck from the
+    // OLD cues as the video plays (fighting manual navigation) and seek the
+    // video whenever we advance the deck. Capture wants them independent.
+    capturePlayer.sync?.setLinked(false);
+    renderCaptureCues();
+    $('capture-status').textContent = 'Play the video — the moment the talk moves to the next slide, hit Stamp.';
   } catch (err) {
     $('capture-status').textContent = 'Could not mount: ' + err.message;
   }
@@ -680,13 +702,36 @@ function destroyCapture() {
   capturePlayer = null;
   $('capture-mount').innerHTML = '';
 }
+// Stamp = "the talk just moved on": record that the NEXT slide starts at the
+// current video time, then advance the deck to it — so capturing a whole talk
+// is play + one button. (Slide 1 at 0:00 is the seed cue every deck starts with.)
 function stampTiming() {
   if (!capturePlayer) { $('capture-status').textContent = 'Open the capture player first.'; return; }
   const { t, slide } = capturePlayer.spot();
-  state.timing.push({ time: t, slide, transition: 'cut', label: '' });
+  const count = capturePlayer.deck?.slideCount || Infinity;
+  if (slide >= count) {
+    $('capture-status').textContent = `Already at the last slide (${slide}) — all cues captured.`;
+    return;
+  }
+  const next = slide + 1;
+  state.timing.push({ time: t, slide: next, transition: 'cut', label: '' });
   state.timing.sort((a, b) => toSeconds(a.time) - toSeconds(b.time));
-  renderTiming(); updatePreview();
-  $('capture-status').textContent = `Stamped slide ${slide} at ${t}s.`;
+  capturePlayer.sync?.gotoSlide(next);          // unlinked → moves the deck only
+  renderTiming(); renderCaptureCues(); updatePreview();
+  $('capture-status').textContent = `✓ Slide ${next} starts at ${fmtClock(t)} — deck advanced, stamp again at the next change.`;
+}
+
+// Compact chips of the captured cues, visible right under the capture player
+// (the full editable table lives in the Advanced view's Timing card).
+function renderCaptureCues() {
+  const box = $('capture-cues');
+  if (!box) return;
+  box.innerHTML = '';
+  const cues = [...state.timing].sort((a, b) => toSeconds(a.time) - toSeconds(b.time));
+  box.hidden = cues.length === 0;
+  for (const c of cues) {
+    box.appendChild(el('span', 'p2-cue-chip', { textContent: `${fmtClock(c.time)} → ${c.slide}` }));
+  }
 }
 
 // --- wire up ----------------------------------------------------------------

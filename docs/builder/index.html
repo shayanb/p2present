@@ -58,28 +58,28 @@
             <span class="p2-hint">New here?</span>
             <button type="button" class="p2-load" id="s-load-demo">▶ Start from the demo talk</button>
           </div>
-          <div class="p2-step">
-            <span class="p2-step-n">1</span>
+          <div class="p2-step" id="s-step-video">
+            <span class="p2-step-n" data-n="1">1</span>
             <label class="p2-field"><span>Video</span>
               <input id="s-video" type="text" inputmode="url" spellcheck="false" placeholder="Paste your talk — YouTube link, .mp4 URL, ipfs:// or magnet:" />
               <small class="p2-hint" id="s-video-kind"></small>
             </label>
           </div>
-          <div class="p2-step">
-            <span class="p2-step-n">2</span>
+          <div class="p2-step" id="s-step-deck">
+            <span class="p2-step-n" data-n="2">2</span>
             <label class="p2-field"><span>Slides</span>
               <input id="s-deck" type="text" inputmode="url" spellcheck="false" placeholder="Paste your slides — .pdf URL, Google Slides link, or deck HTML" />
               <small class="p2-hint" id="s-deck-kind"></small>
             </label>
           </div>
-          <div class="p2-step">
-            <span class="p2-step-n">3</span>
+          <div class="p2-step" id="s-step-title">
+            <span class="p2-step-n" data-n="3">3</span>
             <label class="p2-field"><span>Title <span class="p2-hint">(optional)</span></span>
               <input id="s-title" type="text" placeholder="My talk" />
             </label>
           </div>
-          <div class="p2-step">
-            <span class="p2-step-n">4</span>
+          <div class="p2-step" id="s-step-timing">
+            <span class="p2-step-n" data-n="4">4</span>
             <div class="p2-field"><span>Timing <span class="p2-hint">(optional — slides flip with the talk)</span></span>
               <div class="p2-row-actions">
                 <button type="button" class="p2-load" id="s-chapters-auto">✨ Auto-detect chapters</button>
@@ -164,8 +164,9 @@
         <p class="p2-hint">Play the video, flip to each slide, stamp the moment it changes.</p>
         <div class="p2-capture" id="capture-panel" hidden>
           <div id="capture-mount" class="p2-capture-mount"></div>
+          <div id="capture-cues" class="p2-cue-chips" hidden></div>
           <div class="p2-row-actions">
-            <button type="button" class="p2-load p2-primary" id="capture-stamp">📍 Stamp current time → slide</button>
+            <button type="button" class="p2-load p2-primary" id="capture-stamp">📍 Stamp — next slide starts now</button>
             <span class="p2-hint" id="capture-status"></span>
           </div>
         </div>

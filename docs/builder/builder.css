@@ -80,9 +80,13 @@
 .p2-builder.is-simple .p2-adv { display: none; }
 .p2-builder:not(.is-simple) .p2-simp { display: none; }
 
-/* the simple guided card */
+/* the simple guided card — narrower + centered so the two links read as THE form */
 .p2-simple-flow { display: flex; flex-direction: column; gap: 12px; }
-.p2-simple-card { display: flex; flex-direction: column; gap: 4px; }
+.p2-simple-card {
+  display: flex; flex-direction: column; gap: 4px;
+  width: 100%; max-width: 680px; margin-inline: auto;
+}
+.p2-builder.is-simple .p2-capture-card { width: 100%; max-width: 680px; margin-inline: auto; }
 .p2-step { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; padding: 8px 0; }
 .p2-step + .p2-step { border-top: 1px solid var(--line); }
 .p2-step-n {
@@ -91,6 +95,11 @@
   font-size: 13px; font-weight: 700;
 }
 .p2-step .p2-field { margin: 0; }
+/* filled steps: the number flips to an accent check + the input picks up an
+   accent border — instant "that worked" feedback as links are pasted */
+.p2-step.is-done .p2-step-n { background: var(--accent); color: #04121a; }
+.p2-step.is-done .p2-field > input { border-color: var(--accent-dim); }
+.p2-step.is-done .p2-hint { color: var(--accent); }
 /* "start from the demo" starter row atop the simple card */
 .p2-simple-start {
   display: flex; align-items: center; gap: 10px;
@@ -110,6 +119,14 @@
 .p2-sum-list li .m { width: 16px; text-align: center; color: var(--muted); flex: none; }
 .p2-sum-list li.is-done { color: var(--fg); }
 .p2-sum-list li.is-done .m { color: var(--accent); }
+
+/* captured cues — compact "0:00 → 1" chips under the capture player */
+.p2-cue-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.p2-cue-chip {
+  font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;
+  padding: 3px 9px; border-radius: 999px;
+  color: var(--fg); background: var(--panel-2); border: 1px solid var(--accent-dim);
+}
 
 /* capture panel */
 .p2-capture {

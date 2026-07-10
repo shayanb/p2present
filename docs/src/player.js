@@ -583,7 +583,13 @@ export class Player {
     modes.setAttribute('aria-label', 'Switch layout');
     this._wmButtons = {};
     for (const m of MODES) {
-      const b = iconButton(svgIcon(m.icon), m.short, m.label, () => this.setMode(m.id));
+      // e.detail > 0 = a real mouse click: blur so :focus-within doesn't pin the
+      // dock open after the pointer leaves. Keyboard activation (detail 0) keeps
+      // focus, so tab-users' dock stays open while they're in it.
+      const b = iconButton(svgIcon(m.icon), m.short, m.label, (e) => {
+        this.setMode(m.id);
+        if (e.detail) e.currentTarget.blur();
+      });
       b.classList.add('p2-wm-mode');
       b.classList.toggle('is-on', m.id === this.mode);
       this._wmButtons[m.id] = b;

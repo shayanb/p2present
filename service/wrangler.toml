@@ -12,12 +12,20 @@ name = "p2present"
 main = "src/worker.js"
 compatibility_date = "2024-11-01"
 
+# --- custom domain: serve the API + /p/:id links from p2present.com ----------
+# (requires the p2present.com DNS records to be PROXIED through Cloudflare —
+#  see SERVICE.md → Troubleshooting for the Pages + proxy SSL setup)
+routes = [
+  { pattern = "p2present.com/api/*", zone_name = "p2present.com" },
+  { pattern = "p2present.com/p/*",   zone_name = "p2present.com" },
+]
+
 # --- KV: stores manifests, rate-limit counters, reports ---------------------
 # Replace the placeholder ids with the ones `wrangler kv namespace create` prints.
 [[kv_namespaces]]
 binding = "P2_KV"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_YOUR_PREVIEW_KV_NAMESPACE_ID"
+id = "336ca96056294e5ebf305bd33146273d"           # p2present-prod
+preview_id = "a1ee6f0ff0184276b539f64732e1b98e"   # p2present-preview
 
 # --- public (non-secret) config; override per-deploy as you like ------------
 [vars]
@@ -37,10 +45,3 @@ REPORT_HIDE_THRESHOLD = "5"   # reports before a manifest is auto-hidden
 #   npx wrangler secret put IPFS_PIN_TOKEN     # e.g. a Pinata JWT
 IPFS_PIN = "false"
 # IPFS_PIN_ENDPOINT = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
-
-# --- custom domain (point p2present.com at this Worker) ----------------------
-# Uncomment + adjust to serve the API + /p/:id links from your own domain:
-# routes = [
-#   { pattern = "p2present.com/api/*", zone_name = "p2present.com" },
-#   { pattern = "p2present.com/p/*",   zone_name = "p2present.com" },
-# ]
