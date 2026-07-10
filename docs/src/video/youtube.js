@@ -43,6 +43,14 @@ export class YouTubeProvider extends BaseVideoProvider {
         events: {
           onReady: () => {
             this._ready = true;
+            // YouTube's embed can come up with ITS captions on (a sticky
+            // per-viewer preference) — double-rendering over the manifest's own
+            // subtitle tracks. When we ship subtitles, unload YT's captions
+            // module ('captions' = html5 player, 'cc' = legacy); the viewer can
+            // still re-enable them from the YT gear if they insist.
+            if (this.manifest?.subtitles?.length) {
+              try { this.player.unloadModule('captions'); this.player.unloadModule('cc'); } catch { /* older API */ }
+            }
             // Apply any seek issued before the iframe API became ready (the
             // scrubber can race onReady on a cold load).
             if (this._pendingSeek != null) {

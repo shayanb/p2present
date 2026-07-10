@@ -903,9 +903,22 @@ export class Player {
     };
     this.deckPane.addEventListener('wheel', this._onWheel, { passive: true });
 
-    // Keep the PiP inside the stage when the window resizes.
-    this._onResize = () => { if (this.mode === 'overlap') this._applyPipGeometry(); };
+    // Keep the PiP inside the stage when the window resizes. On mobile rotation
+    // iOS Safari can fire `resize` BEFORE the layout settles (or only fire
+    // `orientationchange`), so a single immediate re-clamp measures the stale
+    // stage rect and the PiP ends up outside the new bounds — re-clamp again
+    // once the layout has settled, and listen to every rotation signal.
+    this._onResize = () => {
+      if (this.mode !== 'overlap') return;
+      this._applyPipGeometry();
+      clearTimeout(this._pipSettleTimer);
+      this._pipSettleTimer = setTimeout(() => {
+        if (this.mode === 'overlap') this._applyPipGeometry();
+      }, 350);
+    };
     window.addEventListener('resize', this._onResize);
+    window.addEventListener('orientationchange', this._onResize);
+    window.visualViewport?.addEventListener('resize', this._onResize);
   }
 
   _cycleMode() {
@@ -922,6 +935,9 @@ export class Player {
     document.body.classList.remove('p2-maximized');
     window.removeEventListener('keydown', this._onKey);
     window.removeEventListener('resize', this._onResize);
+    window.removeEventListener('orientationchange', this._onResize);
+    window.visualViewport?.removeEventListener('resize', this._onResize);
+    clearTimeout(this._pipSettleTimer);
     document.removeEventListener('fullscreenchange', this._onFsChange);
     document.removeEventListener('click', this._onDocClick);
     document.removeEventListener('click', this._onFoldDocClick);
