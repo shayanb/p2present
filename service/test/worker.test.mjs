@@ -357,10 +357,15 @@ test('extractChapters prefers chapterRenderer markers, falls back to description
 
 test('GET /api/chapters proxies YouTube, caches in KV, and validates input', async () => {
   const realFetch = globalThis.fetch;
-  const page = '"chapterRenderer":{"title":{"simpleText":"Start"},"timeRangeStartMillis":0}' +
-               '"chapterRenderer":{"title":{"simpleText":"Middle"},"timeRangeStartMillis":90000}';
+  // innertube (primary) answers with a JSON description; the scrape fallback
+  // would answer with marker HTML — this test exercises the innertube path.
+  const innertube = JSON.stringify({ videoDetails: { shortDescription: 'hi\n0:00 Start\n1:30 Middle\n' } });
   let upstreamCalls = 0;
-  globalThis.fetch = async () => { upstreamCalls++; return new Response(page, { status: 200 }); };
+  globalThis.fetch = async (url) => {
+    upstreamCalls++;
+    if (String(url).includes('youtubei')) return new Response(innertube, { status: 200 });
+    return new Response('<html></html>', { status: 200 });
+  };
   try {
     const env = baseEnv();
     const bad = await call(env, 'GET', '/api/chapters?u=nope');

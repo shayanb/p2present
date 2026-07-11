@@ -276,6 +276,40 @@ export function extractChapters(html) {
   return [];
 }
 
+// The InnerTube player API (what YouTube's own mobile clients call) hands back
+// the video description without the bot-walls the HTML watch page throws at
+// datacenter IPs (it 429s Workers egress) — so it's the primary source, with
+// the page scrape as fallback (the scrape can also see explicit chapter markers).
+async function fetchInnertubeDescription(vid) {
+  // WEB client: playabilityStatus comes back UNPLAYABLE without more auth, but
+  // videoDetails.shortDescription — all we need — is populated regardless.
+  const res = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+    },
+    body: JSON.stringify({
+      context: { client: { clientName: 'WEB', clientVersion: '2.20250101.00.00', hl: 'en' } },
+      videoId: vid,
+    }),
+  });
+  if (!res.ok) throw new Error(`YouTube (innertube) answered HTTP ${res.status}`);
+  const data = await res.json();
+  return data?.videoDetails?.shortDescription || '';
+}
+
+async function fetchWatchHtml(vid) {
+  const res = await fetch(`https://www.youtube.com/watch?v=${vid}&hl=en`, {
+    headers: {
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+      'accept-language': 'en',
+    },
+  });
+  if (!res.ok) throw new Error(`YouTube answered HTTP ${res.status}`);
+  return res.text();
+}
+
 async function handleChapters(env, ip, reqUrl) {
   const u = reqUrl.searchParams.get('u') || reqUrl.searchParams.get('v') || '';
   const vid = videoIdFrom(u);
@@ -287,21 +321,39 @@ async function handleChapters(env, ip, reqUrl) {
 
   if (!(await allowWrite(env, ip))) return json({ error: 'rate_limited' }, 429, env);
 
-  let html;
-  try {
-    const res = await fetch(`https://www.youtube.com/watch?v=${vid}&hl=en`, {
-      headers: {
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-        'accept-language': 'en',
-      },
-    });
-    if (!res.ok) return json({ error: 'upstream', detail: `YouTube answered HTTP ${res.status}` }, 502, env);
-    html = await res.text();
-  } catch (err) {
-    return json({ error: 'upstream', detail: String(err?.message || err) }, 502, env);
-  }
+  // Three sources, most reliable first. YouTube walls off datacenter IPs from
+  // both the watch page (429) and, increasingly, innertube (empty/challenge
+  // responses) — the official Data API (env.YT_API_KEY secret, see SERVICE.md)
+  // is the only dependable path from Workers egress. `authoritative` marks a
+  // source that actually SAW the description, so its "no chapters" is final.
+  let chapters = [];
+  let authoritative = false;
+  const attempts = [];
 
-  const chapters = extractChapters(html);
+  if (env.YT_API_KEY) {
+    try {
+      const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${vid}&key=${env.YT_API_KEY}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      const snippet = j?.items?.[0]?.snippet;
+      if (!snippet) throw new Error('video not found');
+      chapters = chaptersFromText(snippet.description || '');
+      authoritative = true;
+    } catch (err) { attempts.push(`data api: ${err.message}`); }
+  }
+  if (!authoritative) {
+    try {
+      const desc = await fetchInnertubeDescription(vid);
+      if (desc) { chapters = chaptersFromText(desc); authoritative = true; }
+      else attempts.push('innertube: empty description');
+    } catch (err) { attempts.push(`innertube: ${err.message}`); }
+  }
+  if (!authoritative) {
+    try { chapters = extractChapters(await fetchWatchHtml(vid)); authoritative = true; }
+    catch (err) { attempts.push(`scrape: ${err.message}`); }
+  }
+  if (!authoritative) return json({ error: 'upstream', detail: attempts.join(' · ') }, 502, env);
+
   if (chapters.length) await env.P2_KV.put(cacheKey, JSON.stringify(chapters), { expirationTtl: 86400 });
   return json({ videoId: vid, chapters }, 200, env);
 }

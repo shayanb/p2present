@@ -170,9 +170,25 @@ GET <service>/api/chapters?u=<youtube url | 11-char id>
 → { "videoId": "…", "chapters": [{ "time": "1:24", "label": "The problem" }, …] }
 ```
 
-It prefers the video's explicit chapter markers (the segmented player bar) and
-falls back to `M:SS Title` lines in the description. Results are cached in KV
-for a day; cache misses count against the same per-IP rate limit as writes.
+It parses `M:SS Title` lines out of the video description (and the explicit
+chapter markers where readable). Results are cached in KV for a day; cache
+misses count against the same per-IP rate limit as writes.
+
+**Set a `YT_API_KEY` secret to make this reliable.** YouTube walls off
+anonymous datacenter traffic — from Workers egress the watch page answers
+`429` and the innertube API returns empty challenge responses — so without a
+key the endpoint usually can't reach the description at all. The official
+[YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com)
+works from anywhere on an ordinary API key (free quota: 10,000 units/day;
+this endpoint spends 1 per lookup):
+
+```bash
+# console.cloud.google.com → enable "YouTube Data API v3" → Credentials → API key
+cd service
+npx wrangler secret put YT_API_KEY
+```
+
+With the key set it's used first; the scrape paths remain as fallbacks.
 
 ---
 
@@ -212,6 +228,7 @@ strings; the defaults below apply when a var is absent.
 | `REPORT_HIDE_THRESHOLD` | `5` | Reports before a manifest auto-hides. |
 | `IPFS_PIN` | `false` | `"true"` enables the IPFS mirror (needs the secret below). |
 | `IPFS_PIN_TOKEN` *(secret)* | — | Pin-provider token (e.g. Pinata JWT). Set via `wrangler secret put`. |
+| `YT_API_KEY` *(secret)* | — | YouTube Data API v3 key — makes `/api/chapters` reliable (see above). |
 | `IPFS_PIN_ENDPOINT` | Pinata `pinJSONToIPFS` | Pin API endpoint, if not Pinata. |
 
 ---
