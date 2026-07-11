@@ -612,6 +612,27 @@ body::before {
 }
 .p2-scrub:focus-visible { outline: 2px solid var(--accent-dim); outline-offset: 3px; border-radius: 999px; }
 
+/* Sync-toggle tip — a transient toast above the control bar, anchored near the
+   chain button (right end), telling the viewer what the toggle just did. */
+.p2-link-tip {
+  position: absolute; bottom: calc(100% + 10px); right: 10px; z-index: 45;
+  padding: 7px 12px; border-radius: 10px;
+  font-size: 12.5px; white-space: nowrap; color: var(--fg);
+  background:
+    linear-gradient(135deg, rgba(79,209,197,.18), rgba(124,107,255,.16) 50%, rgba(255,92,240,.17)),
+    rgba(10,12,17,.92);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 10px 26px rgba(0,0,0,.45);
+  opacity: 0; pointer-events: none; transform: translateY(4px);
+}
+.p2-link-tip.is-live { animation: p2-tip 2.4s ease forwards; }
+@keyframes p2-tip {
+  0%       { opacity: 0; transform: translateY(4px); }
+  8%, 78%  { opacity: 1; transform: none; }
+  100%     { opacity: 0; transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) { .p2-link-tip.is-live { animation-duration: 1.2s; } }
+
 /* Center play/pause feedback burst (player.js _flashPlayState): a glassy brand
    chip. Play = short pop; pause = linger, then slowly fade so a screenshot a
    beat later is clean, chrome-free video. */

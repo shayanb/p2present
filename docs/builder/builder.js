@@ -330,8 +330,36 @@ function inferDeckType(url) {
 }
 
 const DECK_KIND = { pdf: 'PDF deck', html: 'HTML deck', embed: 'embedded slides (display-only)' };
+
+// Plausibility — "did they paste something loadable?" — gates the ✓ marks, the
+// readiness card, and the Detected hints, so random text doesn't read as done.
+function looksLikeVideoSource(s) {
+  s = String(s || '').trim();
+  if (!s) return false;
+  return /^(https?:\/\/|ipfs:\/\/|ar:\/\/|magnet:\?)/i.test(s)
+    || /youtube\.com|youtu\.be/i.test(s)
+    || /^[\w-]{11}$/.test(s)                          // bare YouTube id
+    || /\.(mp4|webm|m4v|mov|m3u8)([?#]|$)/i.test(s);  // relative video file path
+}
+function looksLikeDeckSource(s) {
+  s = String(s || '').trim();
+  if (!s) return false;
+  return /^(https?:\/\/|ipfs:\/\/|ar:\/\/|magnet:\?)/i.test(s)
+    || /\.(pdf|html?)([?#]|$)/i.test(s)               // relative deck path
+    || /\/$/.test(s);                                 // deck directory
+}
+function videoKindHint() {
+  const v = $('s-video').value.trim();
+  if (!v) return '';
+  if (!looksLikeVideoSource(v)) return '⚠ Not a recognizable video link yet — YouTube, a .mp4 URL, ipfs:// or magnet:';
+  const p = state.video.sources?.[0]?.provider;
+  return `Detected: ${VIDEO_KIND[p] || p}`;
+}
 function deckKindHint() {
-  return $('s-deck').value.trim() ? `Detected: ${DECK_KIND[state.deck.type] || state.deck.type}` : '';
+  const v = $('s-deck').value.trim();
+  if (!v) return '';
+  if (!looksLikeDeckSource(v)) return '⚠ Not a recognizable slides link yet — a .pdf URL, Google Slides link, or deck HTML';
+  return `Detected: ${DECK_KIND[state.deck.type] || state.deck.type}`;
 }
 
 function bindSimple() {
@@ -341,7 +369,7 @@ function bindSimple() {
     if (!state.video.sources.length) state.video.sources = [{ provider: 'youtube', src: '' }];
     state.video.sources[0].src = url;
     state.video.sources[0].provider = inferVideoProvider(url);
-    $('s-video-kind').textContent = url.trim() ? `Detected: ${VIDEO_KIND[state.video.sources[0].provider]}` : '';
+    $('s-video-kind').textContent = videoKindHint();
     renderVideo(); updatePreview();
   });
   $('s-deck').addEventListener('input', () => {
@@ -365,8 +393,7 @@ function fillSimple() {
   $('s-video').value = state.video.sources?.[0]?.src || '';
   $('s-deck').value = state.deck.sources?.[0]?.src || '';
   $('s-deck-kind').textContent = deckKindHint();
-  const p = state.video.sources?.[0]?.provider;
-  $('s-video-kind').textContent = ($('s-video').value.trim() && p) ? `Detected: ${VIDEO_KIND[p] || p}` : '';
+  $('s-video-kind').textContent = videoKindHint();
 }
 
 // The Simple view's friendly readiness card (replaces the raw JSON + validator
@@ -374,8 +401,8 @@ function fillSimple() {
 function renderSimpleSummary(manifest) {
   const box = $('simple-summary');
   if (!box) return;
-  const hasVideo = !!manifest.video?.sources?.length;
-  const hasDeck = !!manifest.deck?.sources?.length;
+  const hasVideo = (manifest.video?.sources || []).some((v) => looksLikeVideoSource(v.src));
+  const hasDeck = (manifest.deck?.sources || []).some((d) => looksLikeDeckSource(d.src));
   const cues = manifest.timing?.length || 0;
   const ready = hasVideo && hasDeck;
   const li = (done, text) =>
@@ -496,8 +523,8 @@ function updateSimpleSteps(manifest) {
     const n = step.querySelector('.p2-step-n');
     if (n) n.textContent = done ? '✓' : (n.dataset.n || n.textContent);
   };
-  mark('s-step-video', !!manifest.video?.sources?.length);
-  mark('s-step-deck', !!manifest.deck?.sources?.length);
+  mark('s-step-video', (manifest.video?.sources || []).some((v) => looksLikeVideoSource(v.src)));
+  mark('s-step-deck', (manifest.deck?.sources || []).some((d) => looksLikeDeckSource(d.src)));
   mark('s-step-title', !!(manifest.title || '').trim());
   mark('s-step-timing', (manifest.timing?.length || 0) > 1);
 }

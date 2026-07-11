@@ -121,6 +121,7 @@ export class Player {
       }),
       (s) => s.src,
     );
+    this._wireDeckFrameInput();   // space/click still pause with focus in the deck
 
     // Subtitles (captions). Placement: 'window' overlays them along the bottom of
     // the whole player; 'video' keeps them in the video pane (native <track> for
@@ -237,7 +238,9 @@ export class Player {
     // Link / unlink sync toggle — a "slides ⟲ video in sync" loop; a slash over
     // it means the deck and video are scrubbing independently (unlinked).
     this.btnLink = button('', 'Slides are chained to the video — scrub one, the other follows. Click to unchain.', () => {
-      this.sync.setLinked(!this.sync.linked);
+      const linked = !this.sync.linked;
+      this.sync.setLinked(linked);
+      this._flashLinkTip(linked);
     });
     this.btnLink.classList.add('p2-link', 'is-linked');
     // A chain link — the canonical "these two are linked" glyph (aspect-ratio
@@ -556,6 +559,57 @@ export class Player {
     const willPlay = !this.video.isPlaying();
     if (willPlay) this.video.play(); else this.video.pause();
     if (this._started) this._flashPlayState(willPlay);
+  }
+
+  // Same-origin iframe decks (the HTML adapter) swallow input: the deck's own
+  // window gets the keys (space = ITS next-slide) and clicks never bubble out
+  // to the stage — so "space / click pauses" silently broke whenever the last
+  // click landed inside the slides. Bridge the two affordances out of the
+  // frame, capture-phase so we run BEFORE the deck's own listeners. A
+  // cross-origin frame throws on access → no-op (those decks are display-only).
+  _wireDeckFrameInput() {
+    const frame = this.deckPane.querySelector('iframe');
+    if (!frame) return;
+    try {
+      const win = frame.contentWindow;
+      const doc = frame.contentDocument;
+      if (!win || !doc) return;
+      win.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault(); e.stopImmediatePropagation();   // the deck never sees it
+          this._togglePlay();
+        }
+      }, true);
+      // Desktop pointers only: on touch, a tap inside an HTML deck is the
+      // deck's own navigation surface (tap-to-advance) — don't fight it.
+      doc.addEventListener('click', (e) => {
+        if (!window.matchMedia('(pointer: fine)').matches) return;
+        if (!this._started || e.defaultPrevented) return;
+        const path = e.composedPath ? e.composedPath() : [e.target];
+        for (const n of path) {
+          if (n && n.matches &&
+              n.matches('a, button, input, select, textarea, summary, [role="button"], [contenteditable]')) return;
+        }
+        this._togglePlay();
+      }, true);
+    } catch { /* cross-origin deck — nothing to bridge */ }
+  }
+
+  // A small toast above the control bar spelling out what the chain toggle just
+  // did — the icon alone is easy to misread the first time.
+  _flashLinkTip(linked) {
+    if (!this.controlsBar) return;
+    if (!this._linkTip) {
+      this._linkTip = el('div', 'p2-link-tip');
+      this._linkTip.setAttribute('role', 'status');
+      this.controlsBar.appendChild(this._linkTip);
+    }
+    this._linkTip.textContent = linked
+      ? 'Sync on — slides follow the video again'
+      : 'Sync off — slides & video move independently';
+    this._linkTip.classList.remove('is-live');
+    void this._linkTip.offsetWidth;                  // restart the CSS animation
+    this._linkTip.classList.add('is-live');
   }
 
   // A YouTube-style center burst confirming a play/pause toggle: pause lingers
