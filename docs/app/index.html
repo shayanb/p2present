@@ -33,14 +33,15 @@
          control cluster on the right — so the title is always readable and the
          reveal never changes the header's height (no page jump). -->
     <div class="p2-brand">
-      <button class="p2-home" id="brand-toggle" type="button" title="Expand player controls" aria-label="Expand player controls"><img class="p2-logo" src="../brand/icon-32.png" width="32" height="32" alt="" /></button>
-      <button class="p2-shell-toggle" id="shell-toggle" type="button" aria-expanded="false" aria-label="Show player header controls" title="Show player header controls">
+      <!-- brand = a plain home link (top-left convention); the chevron button
+           handles expanding/pinning the header cluster -->
+      <a class="p2-home" id="brand-home" href="../" title="p2present home" aria-label="p2present home">
+        <img class="p2-logo" src="../brand/icon-32.png" width="32" height="32" alt="" />
         <span class="p2-name">p2present</span>
-      </button>
+      </a>
       <span class="p2-deck-title" id="deck-title"></span>
       <span class="p2-sig-badge" id="sig-badge" hidden></span>
-      <!-- affordance: hints the header opens on hover/click while collapsed -->
-      <button class="p2-shell-hint" id="shell-hint" type="button" aria-hidden="true" tabindex="-1" title="Hover or click for player controls">
+      <button class="p2-shell-hint" id="shell-toggle" type="button" aria-expanded="false" aria-label="Show player header controls" title="Show player header controls">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
       </button>
     </div>

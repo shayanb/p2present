@@ -1,12 +1,12 @@
 {
   "p2present": "1.0",
-  "title": "Rage-Coding the Mother of All VPNs — Berlin 2026 (PDF deck)",
-  "_comment": "Second demo — exercises the pdf.js deck adapter (deck.type \"pdf\"). Same 23-page deck and same talk video + timing as the HTML demo (../demo/manifest.json), but the slides are rendered from a PDF instead of an HTML <deck-stage>. Times are float SECONDS.",
+  "title": "Rage-Coding the Mother of All VPNs (moav.sh)",
+  "_comment": "Bundled PDF-deck demo — exercises the pdf.js adapter (deck.type \"pdf\"). Real talk, real timing (captured against the recording), real EN/FA subtitles. Relative srcs resolve against this manifest's URL, so the demo works on any origin (p2present.com, localhost, forks).",
   "meta": {
-    "author": "Shayan Bahal",
-    "event": "Berlin 2026",
+    "author": "Shayan Eskandari",
+    "event": "Dappcon Berlin",
     "date": "2026",
-    "description": "PDF slides synced to the talk video — built with p2present (pdf.js deck adapter)."
+    "description": "Multi-protocol internet censorship circumvention stack, built on the conviction that internet freedom cannot depend on any single tool, protocol, or organization."
   },
   "video": {
     "sources": [
@@ -28,30 +28,30 @@
     "ipfsGateways": ["https://{cid}.ipfs.dweb.link", "https://ipfs.io/ipfs/{cid}"],
     "webtorrentTrackers": ["wss://tracker.openwebtorrent.com"]
   },
-  "layout": { "split": 0.6, "transition": "fade" },
+  "layout": { "split": 0.6, "mode": "overlap", "transition": "fade" },
   "timing": [
-    { "time": 0,     "slide": 1,  "transition": "cut",   "label": "01 Title" },
-    { "time": 22,    "slide": 2,  "transition": "fade",  "label": "02 Speaker" },
-    { "time": 70,    "slide": 3,  "transition": "slide", "label": "03 The Pattern" },
-    { "time": 120,   "slide": 4,  "transition": "fade",  "label": "04 This Year" },
-    { "time": 165,   "slide": 5,  "transition": "slide", "label": "05 Global Trend" },
-    { "time": 215,   "slide": 6,  "transition": "fade",  "label": "06 Enshittification" },
-    { "time": 265,   "slide": 7,  "transition": "slide", "label": "07 Web3 Forgot the Promise" },
-    { "time": 310,   "slide": 8,  "transition": "fade",  "label": "08 The Gap" },
-    { "time": 355,   "slide": 9,  "transition": "slide", "label": "09 Rage Coding" },
-    { "time": 405,   "slide": 10, "transition": "fade",  "label": "10 Arsenal" },
-    { "time": 455,   "slide": 11, "transition": "slide", "label": "11 MoaV — Why" },
-    { "time": 510,   "slide": 12, "transition": "fade",  "label": "12 MoaV — Architecture" },
-    { "time": 575,   "slide": 13, "transition": "slide", "label": "13 MoaV — Screenshots" },
-    { "time": 640,   "slide": 14, "transition": "fade",  "label": "14 The Arms Race" },
-    { "time": 695,   "slide": 15, "transition": "slide", "label": "15 The Frontier" },
-    { "time": 745,   "slide": 16, "transition": "fade",  "label": "16 Nedagram" },
-    { "time": 795,   "slide": 17, "transition": "slide", "label": "17 Offline Payments" },
-    { "time": 845,   "slide": 18, "transition": "fade",  "label": "18 Popup Mesh" },
-    { "time": 895,   "slide": 19, "transition": "slide", "label": "19 Morale" },
-    { "time": 935,   "slide": 20, "transition": "fade",  "label": "20 The Friends" },
-    { "time": 975,   "slide": 21, "transition": "slide", "label": "21 MoaV — Future" },
-    { "time": 1020,  "slide": 22, "transition": "fade",  "label": "22 The Ask" },
-    { "time": 1065,  "slide": 23, "transition": "cut",   "label": "23 Close" }
+    { "time": 0,       "slide": 1,                          "label": "Title" },
+    { "time": 22,      "slide": 2,  "transition": "fade",   "label": "Speaker" },
+    { "time": 70,      "slide": 3,  "transition": "slide",  "label": "The Pattern" },
+    { "time": 120,     "slide": 4,  "transition": "fade",   "label": "2026 Iran Internet" },
+    { "time": 165,     "slide": 5,  "transition": "slide",  "label": "Global Trend" },
+    { "time": 215,     "slide": 6,  "transition": "fade",   "label": "Enshittification" },
+    { "time": 265,     "slide": 7,  "transition": "slide",  "label": "Web3 Forgot the Promise" },
+    { "time": "5:44",  "slide": 8,  "transition": "fade",   "label": "The Gap" },
+    { "time": "6:25",  "slide": 9,  "transition": "slide",  "label": "Rage Coding" },
+    { "time": "8:16",  "slide": 10, "transition": "fade",   "label": "Arsenal" },
+    { "time": "9:17",  "slide": 11, "transition": "slide",  "label": "MoaV — Why" },
+    { "time": "10:29", "slide": 12, "transition": "fade",   "label": "MoaV — Architecture" },
+    { "time": "11:12", "slide": 13, "transition": "slide",  "label": "MoaV — Screenshots" },
+    { "time": "11:46", "slide": 14, "transition": "fade",   "label": "The Arms Race" },
+    { "time": "13:20", "slide": 15, "transition": "slide",  "label": "The Frontier" },
+    { "time": "15:03", "slide": 16, "transition": "fade",   "label": "Nedagram" },
+    { "time": "16:13", "slide": 17, "transition": "slide",  "label": "Offline Payments" },
+    { "time": "18:20", "slide": 18, "transition": "fade",   "label": "Popup Mesh" },
+    { "time": "19:39", "slide": 19, "transition": "slide",  "label": "Morale" },
+    { "time": "20:31", "slide": 20, "transition": "fade",   "label": "The Friends" },
+    { "time": "21:25", "slide": 21, "transition": "slide",  "label": "MoaV — Future" },
+    { "time": "22:46", "slide": 22, "transition": "fade",   "label": "The Ask" },
+    { "time": "24:22", "slide": 23,                          "label": "Close" }
   ]
 }
