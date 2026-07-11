@@ -1,4 +1,4 @@
-// worker.js — p2present "pastebin-lite": a tiny Cloudflare Worker + KV backend
+// worker.js — p2present "pastebin-lite": a tiny Cloudflare Worker + KV backend.
 // that hosts p2present.json manifests behind short ids.
 //
 // This is the OPTIONAL community-hosting backend. The p2present app is a static
