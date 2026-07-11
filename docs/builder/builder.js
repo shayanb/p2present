@@ -454,8 +454,11 @@ async function fetchChapters(videoUrl) {
   const base = serviceBase();
   if (!base) return null;
   const res = await fetch(`${base}/api/chapters?u=${encodeURIComponent(videoUrl)}`, { headers: { accept: 'application/json' } });
-  if (!res.ok) return null;
-  const data = await res.json().catch(() => null);
+  // A missing/undeployed service answers 404 (or 5xx) — that's "service
+  // unreachable", NOT "this video has no chapters". Throw so the status line
+  // tells the truth instead of blaming the video.
+  if (!res.ok) throw new Error(`chapter service answered HTTP ${res.status}`);
+  const data = await res.json().catch(() => { throw new Error('chapter service returned a non-JSON response'); });
   const list = Array.isArray(data?.chapters) ? data.chapters : (Array.isArray(data) ? data : null);
   return list && list.length ? list : null;
 }
