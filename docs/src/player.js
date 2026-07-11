@@ -236,14 +236,17 @@ export class Player {
 
     // Link / unlink sync toggle — a "slides ⟲ video in sync" loop; a slash over
     // it means the deck and video are scrubbing independently (unlinked).
-    this.btnLink = button('', 'Sync linked — slides follow the video. Click to unlink.', () => {
+    this.btnLink = button('', 'Slides are chained to the video — scrub one, the other follows. Click to unchain.', () => {
       this.sync.setLinked(!this.sync.linked);
     });
     this.btnLink.classList.add('p2-link', 'is-linked');
+    // A chain link — the canonical "these two are linked" glyph (aspect-ratio
+    // locks, YouTube-style). Intact chain = slides chained to the video; the
+    // slash appears when they're unchained and scrub independently.
     this.btnLink.innerHTML =
       '<svg class="p2-sync-ico" viewBox="0 0 24 24" aria-hidden="true">' +
-        '<path d="M4 9.6a7.6 7.6 0 0 1 13-4.3L19 7.4"/><path d="M19 3.2v4.2h-4.2"/>' +
-        '<path d="M20 14.4a7.6 7.6 0 0 1-13 4.3L5 16.6"/><path d="M5 20.8v-4.2h4.2"/>' +
+        '<path d="M10.2 13.2a4.8 4.8 0 0 0 7.24.52l2.4-2.4a4.8 4.8 0 0 0-6.79-6.79l-1.38 1.37"/>' +
+        '<path d="M13.8 10.8a4.8 4.8 0 0 0-7.24-.52l-2.4 2.4a4.8 4.8 0 0 0 6.79 6.79l1.37-1.37"/>' +
         '<line class="p2-sync-slash" x1="3.5" y1="20.5" x2="20.5" y2="3.5"/>' +
       '</svg>';
 
@@ -543,8 +546,8 @@ export class Player {
     this.btnPlay.title = s.playing ? 'Pause (space)' : 'Play (space)';
     this.btnLink.classList.toggle('is-linked', s.linked);
     this.btnLink.title = s.linked
-      ? 'Sync linked — slides follow the video. Click to unlink.'
-      : 'Sync unlinked — browse slides freely. Click to re-link.';
+      ? 'Slides are chained to the video — scrub one, the other follows. Click to unchain.'
+      : 'Unchained — browse the slides freely without moving the video. Click to re-chain.';
     this.btnLink.setAttribute('aria-pressed', String(s.linked));
     this.subs.update(s.time);   // drives the YouTube caption overlay
   }

@@ -301,6 +301,13 @@ body::before {
   flex: 1; display: flex; align-items: stretch;
   min-height: 0; position: relative;
 }
+/* iOS Safari only synthesizes `click` on elements it deems clickable (computed
+   cursor: pointer) — without this, the tap-to-pause stage handler (and its
+   play/pause feedback burst) never fires on touch. Scoped to touch devices so
+   the desktop cursor over the slides stays a normal arrow. */
+@media (hover: none) {
+  .p2-stage { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+}
 .p2-pane {
   position: relative;
   flex: 1 1 0; min-width: 0; min-height: 0;
