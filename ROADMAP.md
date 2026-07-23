@@ -83,6 +83,26 @@ when your machine is offline. Pay only for what persists.
 
 ---
 
+## v2.5 — Swarm backend (`bzz://`) · *designed; grant proposed*
+
+A fifth persistence provider — and the first with **mutable references**.
+
+- `bzz://` resolution everywhere a source can appear, with ordered gateway
+  fallback (`resolvers.swarmGateways`).
+- Postage-stamp uploads from the Host helper (point at a Bee node or gateway
+  endpoint; credentials stay in-browser, like every provider).
+- **Swarm feeds**: an *updatable* presentation at a *stable* address — fix a
+  slide typo, keep the same shared link. No other backend can do this, and it
+  feeds directly into the v3 registry (a name can resolve to a feed).
+- Design: [issue #2](https://github.com/shayanb/p2present/issues/2) ·
+  Grant proposal: [issue #3](https://github.com/shayanb/p2present/issues/3).
+
+**Why:** the missing middle between IPFS pinning (rented, custodial) and
+Arweave (permanent, immutable) — trustless persistence that can still be
+updated by its author.
+
+---
+
 ## v3 — ENS CCIP-Read registry + EAS verification · *roadmap*
 
 Human-readable, verifiable identities for talks and speakers.

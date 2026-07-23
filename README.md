@@ -1,6 +1,6 @@
 # p2present 🎞️
 
-**Presentations that play themselves — slides and talk video in perfect sync, on a 100% static, forkable page.**
+**Presentations that play themselves — slides and talk video in perfect sync, preserved as one link on storage that can't rot.**
 
 No server, no build step, no dependencies. One repo is both a **player** (paste any manifest source — `https`, `ar://`, `ipfs://`, `magnet:` — and it plays) and a **self-host template** (fork it, drop in your content, enable GitHub Pages).
 
@@ -18,6 +18,12 @@ No server, no build step, no dependencies. One repo is both a **player** (paste 
 | PDF deck + scrubber thumbnails | Signed-manifest badge |
 |---|---|
 | ![PDF deck demo](docs/screenshots/pdf-demo.png) | ![Verified signer badge](docs/screenshots/signed-badge.png) |
+
+## Why
+
+A recorded talk without its slides is half a talk; a deck without the talk is a pile of bullet points. And the two rot separately — the video on one dying platform, the slides on another, the sync between them gone the moment the event site disappears.
+
+p2present binds deck, video, captions, and timing into one small **manifest**, so what survives is the *entire experience* — scrubbing, slide sync, multilingual subtitles, provenance — not a folder of loose files. Put the manifest and its assets on permanent storage (Arweave today, [Swarm next](https://github.com/shayanb/p2present/issues/2)) and a talk becomes **one link that outlives every platform it was ever posted to**.
 
 ## Features
 
@@ -81,7 +87,7 @@ Full reference in **[SPEC.md](SPEC.md)** (+ machine-readable [JSON Schema](docs/
 | **[HOSTING.md](HOSTING.md)** | putting assets on Arweave / IPFS / WebTorrent / S3 |
 | **[SERVICE.md](SERVICE.md)** | the optional "Save & share" backend (Cloudflare Worker + KV) — deploy, domain + SSL |
 | **[DOCS.md](DOCS.md)** | one-page index of everything |
-| **[ROADMAP.md](ROADMAP.md)** | what's next — open core, free forever |
+| **[ROADMAP.md](ROADMAP.md)** | what's next — Swarm backend + feeds, paid persistence, verified ENS/EAS registry; open core, free forever |
 
 ## Extending
 
